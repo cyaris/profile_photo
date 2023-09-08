@@ -3,10 +3,11 @@
   let height
 </script>
 
-<svelte:window bind:outerWidth={width} bind:outerHeight={height} />
-<svg
-  class="no_selection non_reactive overflow-visible fixed top-0 left-0 w-full h-full z-50"
-  id="fireworks"
-  {width}
-  {height}
-/>
+<div class="flex flex-col items-center">
+  <div class="flex-col w-fit h-full max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
+    <img src="./src/lib/static/profile_photo.png" />
+  </div>
+  <svg class="absolute" id="profile_photo" {width} {height}>
+    <rect x={0} y={0} {width} {height} fill="transparent" stroke="red" stroke-width={10} />
+  </svg>
+</div>
