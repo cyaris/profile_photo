@@ -4,7 +4,10 @@ import "../node_modules/svelte-lib/src/lib/static/styles/root.css"
 import "../node_modules/svelte-lib/src/lib/static/styles/app.css"
 
 let div = document.createElement("div")
-div.classList.add("fireworks fixed top-0 left-0 w-full h-full z-50")
+div.classList.add("profile-photo")
+
+  // console.log(profilePhoto)
+// document.body.appendChild(profilePhoto)
 
 let script = document.currentScript
 script.parentNode.insertBefore(div, script)
