@@ -1,0 +1,14 @@
+.DS_Store
+.svelte-kit
+
+build
+dist
+node_modules
+package
+
+**/Test.svelte
+
+profile_photo.png
+profile_photo_pixelated.png
+proile_photo_hover_sections.json
+proile_photo_pixel_rgb_codes.json
