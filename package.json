@@ -24,11 +24,6 @@
     "dist",
     "node_modules"
   ],
-  "exports": {
-    "./components": {
-      "import": "./src/lib/components/index.js"
-    }
-  },
   "dependencies": {
     "svelte-lib": "file:../svelte-lib"
   }
