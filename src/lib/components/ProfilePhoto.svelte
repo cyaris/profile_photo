@@ -198,9 +198,11 @@
   </div>
 
   <div class="flex flex-col items-center mt-4">
-    <div>Hover on my face!</div>
+    <div class="text-xl">Hover on my face!</div>
     {#if sliderValue !== 2}
-      <div>Percent revealed: {((revealed.length / pixels.length) * 100).toFixed(1).replace(/\.0+$/, "")}%</div>
+      <div class="mt-1">
+        Percent revealed: {((revealed.length / pixels.length) * 100).toFixed(1).replace(/\.0+$/, "")}%
+      </div>
     {/if}
   </div>
 </div>
