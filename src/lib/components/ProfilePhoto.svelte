@@ -135,7 +135,7 @@
   <svg class="absolute" id="profile_photo" {width} {height} />
   <div class="flex flex-col items-center mt-4">
     <Slider
-      wrapperClasses="w-96 text-sm"
+      wrapperClasses="w-80 text-sm"
       value={sliderValue}
       {items}
       min={0}
