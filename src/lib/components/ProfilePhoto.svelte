@@ -14,18 +14,20 @@
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
-      pixelHeight = height / Math.max(...pixels.map(v => v.y + 1))
+      // TODO: fix bug where img renders at 5px less than height variable.
+      pixelHeight = (height - 5) / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
   }
 
   function appendPixels() {
-    d3.select("#profile_photo")
+    d3.select("#pixel_canvas")
       .selectAll()
       .data(pixels)
       .enter()
       .append("rect")
       .attr("class", "pixels")
+      // .classed("non-reactive", false)
       .attr("id", d => d.id)
       .attr("x", d => d.x * pixelWidth)
       .attr("y", d => d.y * pixelHeight)
@@ -49,7 +51,7 @@
       if (sliderValue !== 2) {
         revealed = [...revealed, ...transitionIds]
       }
-      d3.select("#profile_photo")
+      d3.select("#pixel_canvas")
         .selectAll(transitionIds.join(", "))
         .classed("non-reactive", true)
         .style("stroke-width", 0.3)
@@ -82,7 +84,7 @@
       let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
       if (transitionIds.length) {
-        let transitionPixels = d3.select("#profile_photo").selectAll(transitionIds.join(", "))
+        let transitionPixels = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
 
         transitionPixels
           .transition()
@@ -120,6 +122,39 @@
       .filter(v => !d3.select(v).empty())
   }
 
+  // credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
+  // I took what was there and made adjustments launchXLocd on preference and version differences, but the basic foundation was all set up on that page.
+  let executeLaserEyes = function (d) {
+    Array.from({ length: 4 }, (_, index) => index).forEach(i => {
+      // appending two laser eyes, each with manually inputted x/y values.
+      createLaserEyeWave(i, 177.5, 201.25)
+      createLaserEyeWave(i, 246.75, 197.75)
+    })
+  }
+
+  let createLaserEyeWave = function (i, cxInput, cyInput) {
+    let laserEyes = d3
+      .select("#laser_eye_canvas")
+      .append("circle")
+      .attr("cx", cxInput)
+      .attr("cy", cyInput)
+      .attr("r", 0.25)
+      .style("fill", "transparent")
+      .style("stroke", "#cc0000")
+      .style("stroke-width", 7.5)
+
+    laserEyes
+      .transition()
+      // this delay is increasingly long for each circle
+      // additional seconds are added so that the eyes are stay red for a few seconds before transitioning
+      .delay(i * 225 + 500)
+      .duration(2000)
+      .attr("r", 200)
+      .style("stroke-width", 0)
+      .style("stroke-opacity", 0)
+      .on("end", () => laserEyes.remove())
+  }
+
   let items = [
     { value: "reveal", label: "Reveal" },
     { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
@@ -127,13 +162,17 @@
   ]
 
   let sliderValue = 0
+  let laserEyesTimer
 </script>
 
 <div class="flex flex-col items-center">
   <div class="flex-col w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img src={profilePhotoSrc} />
   </div>
-  <svg class="absolute" id="profile_photo" {width} {height} />
+  <svg class="absolute" id="profile_photo" {width} {height}>
+    <g id="laser_eye_canvas"></g>
+    <g id="pixel_canvas"></g>
+  </svg>
   <div class="flex flex-col items-center mt-4">
     <Slider
       wrapperClasses="w-80 text-sm"
@@ -146,6 +185,13 @@
       on:valueChange={({ detail: e }) => {
         sliderValue = e.d
         revealed = []
+        if (sliderValue == 1) {
+          // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
+          // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
+          laserEyesTimer = d3.interval(executeLaserEyes, 3000)
+        } else {
+          laserEyesTimer.stop()
+        }
         d3.selectAll(".pixels").remove()
         appendPixels()
       }}
