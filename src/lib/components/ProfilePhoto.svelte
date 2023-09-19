@@ -62,13 +62,6 @@
       .delay(pixelTransitionDelay)
       .duration(pixelTransitionDuration)
       .style("opacity", 0)
-    // .on("end", () => {
-    //   // pixels will be recreated when the slider is used
-    //   // removing those that have been activated for reveal modes.
-    //   if (transitionSlider.value() != 2) {
-    //     d3.select(this).remove()
-    //   }
-    // })
   }
 
   let pixelMouseLeave = function (d) {
@@ -100,6 +93,13 @@
       .delay(pixelTransitionDelay)
       .duration(pixelTransitionDuration)
       .style("stroke-width", 0.075)
+      // .on("end", () => {
+      //   // pixels will be recreated when the slider is used
+      //   // removing those that have been activated for reveal modes.
+      //   if (transitionSlider.value() != 2) {
+      //     d3.select(this).remove()
+      //   }
+      // })
   }
 
   function getTransitionIds(id) {
