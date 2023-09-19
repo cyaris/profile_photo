@@ -14,25 +14,28 @@
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
       pixelHeight = height / Math.max(...pixels.map(v => v.y + 1))
-
-      d3.select("#profile_photo")
-        .selectAll()
-        .data(pixels)
-        .enter()
-        .append("rect")
-        .attr("id", d => d.id)
-        .attr("x", d => d.x * pixelWidth)
-        .attr("y", d => d.y * pixelHeight)
-        .attr("width", pixelWidth)
-        .attr("height", pixelHeight)
-        .style("stroke", "white")
-        .style("stroke-width", 0.075)
-        .style("fill", d => d.rgb)
-        .on("mouseover", pixelMouseOver)
-        .on("mouseleave", pixelMouseLeave)
+      appendPixels()
     }
   }
 
+  function appendPixels() {
+    d3.select("#profile_photo")
+      .selectAll()
+      .data(pixels)
+      .enter()
+      .append("rect")
+      .attr("class", "pixels")
+      .attr("id", d => d.id)
+      .attr("x", d => d.x * pixelWidth)
+      .attr("y", d => d.y * pixelHeight)
+      .attr("width", pixelWidth)
+      .attr("height", pixelHeight)
+      .style("stroke", "white")
+      .style("stroke-width", 0.075)
+      .style("fill", d => d.rgb)
+      .on("mouseover", pixelMouseOver)
+      .on("mouseleave", pixelMouseLeave)
+  }
   let transitionDelay = 100
   let transitionDuration = 750
   let transitionLength = transitionDelay * 2 + transitionDuration * 2
@@ -141,7 +144,11 @@
       min={0}
       max={2}
       hoverable={false}
-      on:valueChange={({ detail: e }) => (sliderValue = e.d)}
+      on:valueChange={({ detail: e }) => {
+        sliderValue = e.d
+        d3.selectAll(".pixels").remove()
+        appendPixels()
+      }}
     />
   </div>
 </div>
