@@ -44,7 +44,7 @@
     let transitionIds = getTransitionIds(d3.select(this).attr("id")).filter(v => !d3.select(v).classed("non-reactive"))
 
     if (transitionIds.length) {
-      if ([0, 1].includes(sliderValue)) {
+      if (sliderValue !== 2) {
         revealed = [...revealed, ...transitionIds]
       }
       d3.select("#profile_photo")
@@ -71,15 +71,6 @@
         .delay(transitionDelay)
         .duration(transitionDuration)
         .style("opacity", 0)
-
-      if (sliderValue == 2) {
-        d3.timeout(
-          () => {
-            d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
-          },
-          (transitionDelay + transitionDuration) * 2
-        )
-      }
     }
   }
 
@@ -112,6 +103,13 @@
           // .delay(transitionDelay)
           .duration(transitionDuration)
           .style("stroke-width", 0.075)
+
+        d3.timeout(
+          () => {
+            d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
+          },
+          transitionLength + 500 + transitionDuration * 2
+        )
       }
     }
   }
@@ -147,6 +145,7 @@
       min={0}
       max={2}
       hoverable={false}
+      springValues={{ stiffness: 1, damping: 1 }}
       on:valueChange={({ detail: e }) => {
         sliderValue = e.d
         revealed = []
@@ -158,7 +157,7 @@
 
   <div class="flex flex-col items-center mt-4">
     <div>Hover on my face!</div>
-    {#if [0, 1].includes(sliderValue)}
+    {#if sliderValue !== 2}
       <div>Percent revealed: {((revealed.length / pixels.length) * 100).toFixed(1).replace(/\.0+$/, "")}%</div>
     {/if}
   </div>
