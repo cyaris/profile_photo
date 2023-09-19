@@ -36,6 +36,7 @@
       .on("mouseover", pixelMouseOver)
       .on("mouseleave", pixelMouseLeave)
   }
+  
   let transitionDelay = 100
   let transitionDuration = 750
   let transitionLength = transitionDelay * 2 + transitionDuration * 2
