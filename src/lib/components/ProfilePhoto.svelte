@@ -32,20 +32,20 @@
     }
   }
 
-  let pixelTransitionDelay = 100
-  let pixelTransitionDuration = 750
-  let pixelTransitionLength = pixelTransitionDelay * 2 + pixelTransitionDuration * 2
+  let transitionDelay = 100
+  let transitionDuration = 750
+  let transitionLength = transitionDelay * 2 + transitionDuration * 2
 
   let pixelMouseOver = function (d) {
-    
+
     let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
     d3.select("#profile_photo")
       .selectAll(transitionIds.join(", "))
       .style("stroke-width", 0.3)
       .transition()
-      .delay(pixelTransitionDelay)
-      .duration(pixelTransitionDuration)
+      .delay(transitionDelay)
+      .duration(transitionDuration)
       .attr("x", d => d.x * pixelWidth + 1.5)
       .attr("y", d => d.y * pixelHeight - 1)
       .attr("width", pixelWidth / 1.5)
@@ -60,8 +60,8 @@
           ")"
       )
       .transition()
-      .delay(pixelTransitionDelay)
-      .duration(pixelTransitionDuration)
+      .delay(transitionDelay)
+      .duration(transitionDuration)
       .style("opacity", 0)
     // .on("end", () => {
     //   // pixels will be recreated when the slider is used
@@ -81,8 +81,8 @@
     d3.select("#profile_photo")
       .selectAll(transitionIds.join(", "))
       .transition()
-      .delay(pixelTransitionLength + 500)
-      .duration(pixelTransitionDuration)
+      .delay(transitionLength + 500)
+      .duration(transitionDuration)
       .attr("x", d => d.x * pixelWidth)
       .attr("y", d => d.y * pixelHeight)
       .attr("width", pixelWidth)
@@ -98,8 +98,8 @@
       )
       .style("opacity", 1)
       .transition()
-      .delay(pixelTransitionDelay)
-      .duration(pixelTransitionDuration)
+      .delay(transitionDelay)
+      .duration(transitionDuration)
       .style("stroke-width", 0.075)
   }
 
