@@ -119,7 +119,5 @@
   <div class="flex-col w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img src={profilePhotoSrc} />
   </div>
-  {#if pixelWidth && pixelHeight}
-    <svg class="absolute" id="profile_photo" {width} {height} />
-  {/if}
+  <svg class="absolute" id="profile_photo" {width} {height} />
 </div>
