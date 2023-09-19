@@ -66,45 +66,47 @@
         .duration(transitionDuration)
         .style("opacity", 0)
 
-      d3.timeout(
-        () => {
-          d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
-        },
-        (transitionDelay + transitionDuration) * 2
-      )
+      if (sliderValue == 2) {
+        d3.timeout(
+          () => {
+            d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
+          },
+          (transitionDelay + transitionDuration) * 2
+        )
+      }
     }
   }
 
   let pixelMouseLeave = function (d) {
     // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
-    // if (transitionSlider.value() == 2) {
+    if (sliderValue == 2) {
+      let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
-    let transitionIds = getTransitionIds(d3.select(this).attr("id"))
-
-    if (transitionIds.length) {
-      d3.select("#profile_photo")
-        .selectAll(transitionIds.join(", "))
-        .transition()
-        .delay(transitionLength + 500)
-        .duration(transitionDuration)
-        .attr("x", d => d.x * pixelWidth)
-        .attr("y", d => d.y * pixelHeight)
-        .attr("width", pixelWidth)
-        .attr("height", pixelHeight)
-        .attr(
-          "transform",
-          d =>
-            "rotate(0," +
-            (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-            "," +
-            (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-            ")"
-        )
-        .style("opacity", 1)
-        .transition()
-        // .delay(transitionDelay)
-        .duration(transitionDuration)
-        .style("stroke-width", 0.075)
+      if (transitionIds.length) {
+        d3.select("#profile_photo")
+          .selectAll(transitionIds.join(", "))
+          .transition()
+          .delay(transitionLength + 500)
+          .duration(transitionDuration)
+          .attr("x", d => d.x * pixelWidth)
+          .attr("y", d => d.y * pixelHeight)
+          .attr("width", pixelWidth)
+          .attr("height", pixelHeight)
+          .attr(
+            "transform",
+            d =>
+              "rotate(0," +
+              (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
+              "," +
+              (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
+              ")"
+          )
+          .style("opacity", 1)
+          .transition()
+          // .delay(transitionDelay)
+          .duration(transitionDuration)
+          .style("stroke-width", 0.075)
+      }
     }
   }
 
@@ -123,7 +125,7 @@
     { value: "transition", label: "Transition" },
   ]
 
-  let sliderValue = 1
+  let sliderValue = 0
 </script>
 
 <div class="flex flex-col items-center">
