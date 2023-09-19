@@ -1,0 +1,360 @@
+<!-- <!DOCTYPE html> -->
+<html>
+  <head>
+    <style type="text/css">
+      @media (max-width: 500px) {
+        #profile_photo,
+        #profile_photo_pixels,
+        #transition_menu {
+          display: none;
+        }
+      }
+
+      svg text {
+        stroke: black;
+        fill: black;
+        background: white;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- creating two overlapping divs for the photo and the animated pixels on top. -->
+    <div id="profile_photo" align="center" style="margin-bottom: -406.25px"></div>
+    <div id="profile_photo_pixels" align="center" style="margin-bottom: 15px"></div>
+    <!-- creating a div where the slider will be.  -->
+    <div id="transition_menu" align="center" style="margin-bottom: 30px"></div>
+    <script type="text/javascript">
+      // set the dimensions and margins of the graph.
+      ;(margin = {
+        top: 0,
+        bottom: 15,
+        left: 0,
+        right: 0,
+      }),
+        (width = 405),
+        (height = 405),
+        (svg3Height = 120)
+
+      // append the svg object to the body of the page.
+      appendSVG("svg1", "profile_photo", width, height, margin.left, margin.top, "auto")
+      // a separate svg is needed for the pixels so that they will always be on top, even while objects are appended to the original image (laser eyes).
+      appendSVG("svg2", "profile_photo_pixels", width, height, margin.left, margin.top + 1, "auto")
+      appendSVG("svg3", "transition_menu", width, svg3Height, margin.left, margin.top, "auto")
+
+      appendText(svg3, null, "hover_instructions", 130, 85, "18px", "normal", 0.8, 0, "Hover on my face!")
+
+      // credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
+      // I took what was there and made adjustments launchXLocd on preference and version differences, but the basic foundation was all set up on that page.
+      executeLaserEyes = function (d) {
+        for (var i = 0; i <= 4; ++i) {
+          createLaserEye = function (i, cxInput, cyInput) {
+            svg1
+              .append("circle")
+              .attr("cx", cxInput)
+              .attr("cy", cyInput)
+              .attr("r", 0.25)
+              .style("fill", "transparent")
+              .style("stroke", "#cc0000")
+              .style("stroke-width", 7.5)
+              .transition()
+              // this delay is increasingly long for each circle
+              // additional seconds are added so that the eyes are stay red for a few seconds before transitioning
+              .delay(i * 225 + 500)
+              .duration(2000)
+              .attr("r", 200)
+              .style("stroke-width", 0)
+              .style("stroke-opacity", 0)
+              .on("end", function () {
+                d3.select(this).remove()
+              })
+          }
+          // appending first laser eye
+          createLaserEye(i, 177.5, 201.25)
+          // appending second laser eye
+          createLaserEye(i, 246.75, 197.75)
+        }
+      }
+
+      // appending the original version of the photo, invisible upon page load.
+      // x,y coordinates are relative to the transform translate above.
+      svg1
+        .append("svg:image")
+        .attr("class", "no_selection non_reactive")
+        // .attr('id', 'full_resolution_photo')
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", width)
+        .attr("height", height)
+        .attr("xlink:href", "{{site.url}}/assets/img/profile_photo.png")
+
+      //Read the data
+      d3.csv("{{site.url}}/assets/csv/profile_photo/proile_photo_pixel_rgb_codes.csv", function (data) {
+        // defining time variables as inputs for pixelMO and pixelML tansitions.
+        ;(pixelTransDelay = 100),
+          (pixelTransDuration = 750),
+          (pixelTransLength = pixelTransDelay * 2 + pixelTransDuration * 2)
+
+        function getPixelCoordinateString(xCoordinateInput, xAdjustment, yCoordinateInput, yAdjustment) {
+          pixelCoordinate = "#x" + String(xCoordinateInput + xAdjustment) + "y" + String(yCoordinateInput + yAdjustment)
+          if (svg2.select(pixelCoordinate).empty()) {
+            return null
+          } else {
+            return pixelCoordinate
+          }
+        }
+
+        // determining input for selectAll launchXLocd on valid pixels
+        function getTransitionSelect(idInput) {
+          ;(currentPixel = "#" + idInput),
+            (xInput = parseInt(idInput.replace("x", "").split("y", 2)[0])),
+            (yInput = parseInt(idInput.replace("x", "").split("y", 2)[1]))
+
+          // defining neighbors so they'll activate a 3x3 box area of pixels in all directions
+          // these each need to be evaluated to confirm that the pixel exists
+          // each of these will be checked individually to see their current opacity
+          // only those that are not invisible will be needed (since those are already fully transitioned)
+          transitionPixels = Array(currentPixel)
+          transitionPixelCoordinates = [
+            [2, 2],
+            [2, 1],
+            [2, 0],
+            [2, -1],
+            [2, -2],
+            [-2, 2],
+            [-2, 1],
+            [-2, 0],
+            [-2, -1],
+            [-2, -2],
+            [1, 2],
+            [1, -2],
+            [0, 2],
+            [0, -2],
+            [-1, 2],
+            [-1, -2],
+            // below are the coordinates inside of the main box.
+            [1, 1],
+            [1, 0],
+            [1, -1],
+            [0, 1],
+            [0, 0],
+            [0, -1],
+            [-1, 1],
+            [-1, 0],
+            [-1, -1],
+          ]
+
+          for (var i = 0; i <= transitionPixelCoordinates.length - 1; i++) {
+            ;(xCoordinate = transitionPixelCoordinates[i][0]), (yCoordinate = transitionPixelCoordinates[i][1])
+            pixelCoordinateString = getPixelCoordinateString(xInput, xCoordinate, yInput, yCoordinate)
+            if (pixelCoordinateString != null) {
+              transitionPixels.push(pixelCoordinateString)
+            }
+          }
+
+          transitionSelect = null
+          // creating conditional for whether it's a mouseover or mouseleave
+          // goal here is to limit transitions that are unnecesarry (ex: transitioning an invisible object)
+          for (var i = 0; i <= transitionPixels.length - 1; i++) {
+            // creating a string that will have all ids needed for transition select statements
+            if (transitionSelect == null) {
+              transitionSelect = transitionPixels[i]
+            } else {
+              transitionSelect += ", " + transitionPixels[i]
+            }
+          }
+          return transitionSelect
+        }
+
+        function countInvisiblePixels() {
+          // getting total 'invisible pixels' by comparing total remaining pixels to original pixel count.
+          invisiblePixels = originalPhotoPixelSize - svg2.selectAll(".photo_pixels").size()
+          ;(percentFormat = d3.format(".2f")),
+            (percentRevealed = percentFormat((invisiblePixels / originalPhotoPixelSize) * 100)),
+            (textInput = "Percent Revealed: " + percentRevealed + "%")
+
+          // labelling dynamically the percent of the non-pixelated photo that's fully visible.
+          svg3.select("#percent_revealed").remove()
+          appendText(svg3, null, "percent_revealed", 117.5, 110, "15px", "normal", 0.8, 0, textInput)
+
+          return percentRevealed
+        }
+
+        // the percent of total pixels revealed will be continuously updated every x (see limit) seconds
+        // once the percent reaches 100, the fireworks will be launched, and not launched again unless the mode is changed (resetting the percentage to zero)
+        launchedAlready = false
+        // running a check on an interval to see how much of the photo has been revealed.
+        // one this reached the threshold, the fireworks show will begin and all remaining pixels will be removed.
+        percentRevealedLimit = 90
+        d3.interval(function () {
+          // no fireworks show can happen during transition mode.
+          if (transitionSlider.value() == 2) {
+            // labelling dynamically the percent of the non-pixelated photo that's fully visible.
+            svg3.select("#percent_revealed").remove()
+            appendText(svg3, null, "percent_revealed", 129, 110, "15px", "normal", 0.8, 0, "Percent Revealed: N/A")
+          } else {
+            percentRevealed = countInvisiblePixels()
+            if (percentRevealed >= percentRevealedLimit && launchedAlready == false) {
+              // removing all pixels invisible once the once the fireworks show has begun.
+              svg2.selectAll(".photo_pixels").remove()
+              launchedAlready = true
+              launchFireworkShow(100, 25, 2500)
+            }
+          }
+        }, 500)
+
+        var pixelMO = function (d) {
+            ;(thisID = d3.select(this).attr("id")), (transitionSelect = getTransitionSelect(thisID))
+
+            svg2
+              .selectAll(transitionSelect)
+              .style("stroke-width", 0.3)
+              .transition()
+              .delay(pixelTransDelay)
+              .duration(pixelTransDuration)
+              // .ease(d3.easeQuad)
+              .attr("x", function (d) {
+                return x(d.x_coordinate) + 1.5
+              })
+              .attr("y", function (d) {
+                return y(d.y_coordinate) - 1
+              })
+              .attr("width", x.bandwidth() / 1.5)
+              .attr("height", y.bandwidth() / 1.5)
+              .attr("transform", function (d) {
+                return (
+                  "rotate(45," +
+                  (x(d.x_coordinate) + (x.bandwidth() - x.bandwidth() / 1.5) / 2) +
+                  "," +
+                  (y(d.y_coordinate) + (y.bandwidth() - y.bandwidth() / 1.5)) +
+                  ")"
+                )
+              })
+              .transition()
+              .delay(pixelTransDelay)
+              .duration(pixelTransDuration)
+              .style("opacity", 0)
+              .on("end", function () {
+                // // pixels will be recreated when the slider is used
+                // // removing those that have been activated for reveal modes.
+                if (transitionSlider.value() != 2) {
+                  d3.select(this).remove()
+                }
+              })
+          },
+          pixelML = function (d) {
+            // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
+            if (transitionSlider.value() == 2) {
+              ;(thisID = d3.select(this).attr("id")), (transitionSelect = getTransitionSelect(thisID))
+
+              svg2
+                .selectAll(transitionSelect)
+                .transition()
+                .delay(pixelTransLength + 500)
+                .duration(pixelTransDuration)
+                // .ease(d3.easeQuad)
+                .attr("x", function (d) {
+                  return x(d.x_coordinate)
+                })
+                .attr("y", function (d) {
+                  return y(d.y_coordinate)
+                })
+                .attr("width", x.bandwidth())
+                .attr("height", y.bandwidth())
+                .attr("transform", function (d) {
+                  return (
+                    "rotate(0," +
+                    (x(d.x_coordinate) + (x.bandwidth() - x.bandwidth() / 1.5) / 2) +
+                    "," +
+                    (y(d.y_coordinate) + (y.bandwidth() - y.bandwidth() / 1.5) / 2) +
+                    ")"
+                  )
+                })
+                .style("opacity", 1)
+                .transition()
+                .delay(pixelTransDelay)
+                .duration(pixelTransDuration)
+                .style("stroke-width", 0.075)
+            }
+          }
+
+        function createPhotoPixels() {
+          // adding the 48x48 pixels that will make up the profile photo
+          rect = svg2
+            .selectAll()
+            .data(data, function (d) {
+              return d.x_coordinate + ":" + d.y_coordinate
+            })
+            .enter()
+
+          rect
+            .append("rect")
+            .attr("class", "photo_pixels")
+            .attr("id", function (d) {
+              return "x" + String(parseInt(d.x_coordinate)) + "y" + String(parseInt(d.y_coordinate))
+            })
+            .attr("x", function (d) {
+              return x(d.x_coordinate)
+            })
+            .attr("y", function (d) {
+              return y(d.y_coordinate)
+            })
+            .attr("rx", 0)
+            .attr("ry", 0)
+            .attr("width", x.bandwidth())
+            .attr("height", y.bandwidth())
+            .style("stroke", "white")
+            .style("stroke-width", 0.075)
+            .style("fill", function (d) {
+              return "rgb(" + String(parseInt(d.r)) + "," + String(parseInt(d.g)) + "," + String(parseInt(d.b)) + ")"
+            })
+            .on("mouseover", pixelMO)
+            .on("mouseleave", pixelML)
+        }
+        // Labels of row and columns -> unique identifier of the column called 'xCoordinate' and 'yCoordinate'
+        ;(pixelX = d3
+          .map(data, function (d) {
+            return d.x_coordinate
+          })
+          .keys()),
+          (pixelY = d3
+            .map(data, function (d) {
+              return d.y_coordinate
+            })
+            .keys())
+        // Build X and Y scales and axis:
+        // Scaling the pixels within the space of the svg.
+        ;(x = d3.scaleBand().range([0, width]).domain(pixelX).padding(0)),
+          (y = d3.scaleBand().range([0, height]).domain(pixelY).padding(0))
+        createPhotoPixels()
+        originalPhotoPixelSize = svg2.selectAll(".photo_pixels").size()
+
+        function sliderChangeFunction() {
+          d3.selectAll(".photo_pixels").remove()
+          createPhotoPixels()
+          // fireworks can be launched again since the percent revealed will be back to zero.
+          launchedAlready = false
+          if (transitionSlider.value() == 1) {
+            // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
+            // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
+            timer = d3.interval(executeLaserEyes, 3000)
+          } else {
+            timer.stop()
+          }
+        }
+
+        sliderData = {
+          ticks: [0, 1, 2],
+          tick_labels: { 0: "Reveal Mode", 1: "Reveal My Laser Vision Mode", 2: "Transition Mode" },
+          step: 1,
+          default: 0,
+          width: 300,
+        }
+        transitionSlider = defineSlider(sliderData, function (d) {
+          sliderChangeFunction()
+        })
+        callGroupSVG(svg3, "slider", "transition_slider", null, "translate(50,10)", transitionSlider, "auto")
+        formatSlider("12px")
+      })
+    </script>
+  </body>
+</html>
