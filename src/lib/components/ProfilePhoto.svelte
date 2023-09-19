@@ -1,6 +1,7 @@
 <script>
   import * as d3 from "d3"
 
+  import { Slider } from "svelte-lib/components"
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
   import relativeTransitionIds from "../static/relative_transition_pixels.json"
@@ -37,39 +38,41 @@
   let transitionLength = transitionDelay * 2 + transitionDuration * 2
 
   let pixelMouseOver = function (d) {
+    let transitionIds = getTransitionIds(d3.select(this).attr("id")).filter(v => !d3.select(v).classed("non-reactive"))
 
-    let transitionIds = getTransitionIds(d3.select(this).attr("id"))
+    if (transitionIds.length) {
+      d3.select("#profile_photo")
+        .selectAll(transitionIds.join(", "))
+        .classed("non-reactive", true)
+        .style("stroke-width", 0.3)
+        .transition()
+        .delay(transitionDelay)
+        .duration(transitionDuration)
+        .attr("x", d => d.x * pixelWidth + 1.5)
+        .attr("y", d => d.y * pixelHeight - 1)
+        .attr("width", pixelWidth / 1.5)
+        .attr("height", pixelHeight / 1.5)
+        .attr(
+          "transform",
+          d =>
+            "rotate(45," +
+            (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
+            "," +
+            (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
+            ")"
+        )
+        .transition()
+        .delay(transitionDelay)
+        .duration(transitionDuration)
+        .style("opacity", 0)
 
-    d3.select("#profile_photo")
-      .selectAll(transitionIds.join(", "))
-      .style("stroke-width", 0.3)
-      .transition()
-      .delay(transitionDelay)
-      .duration(transitionDuration)
-      .attr("x", d => d.x * pixelWidth + 1.5)
-      .attr("y", d => d.y * pixelHeight - 1)
-      .attr("width", pixelWidth / 1.5)
-      .attr("height", pixelHeight / 1.5)
-      .attr(
-        "transform",
-        d =>
-          "rotate(45," +
-          (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-          "," +
-          (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-          ")"
+      d3.timeout(
+        () => {
+          d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
+        },
+        (transitionDelay + transitionDuration) * 2
       )
-      .transition()
-      .delay(transitionDelay)
-      .duration(transitionDuration)
-      .style("opacity", 0)
-    // .on("end", () => {
-    //   // pixels will be recreated when the slider is used
-    //   // removing those that have been activated for reveal modes.
-    //   if (transitionSlider.value() != 2) {
-    //     d3.select(this).remove()
-    //   }
-    // })
+    }
   }
 
   let pixelMouseLeave = function (d) {
@@ -78,29 +81,31 @@
 
     let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
-    d3.select("#profile_photo")
-      .selectAll(transitionIds.join(", "))
-      .transition()
-      .delay(transitionLength + 500)
-      .duration(transitionDuration)
-      .attr("x", d => d.x * pixelWidth)
-      .attr("y", d => d.y * pixelHeight)
-      .attr("width", pixelWidth)
-      .attr("height", pixelHeight)
-      .attr(
-        "transform",
-        d =>
-          "rotate(0," +
-          (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-          "," +
-          (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-          ")"
-      )
-      .style("opacity", 1)
-      .transition()
-      .delay(transitionDelay)
-      .duration(transitionDuration)
-      .style("stroke-width", 0.075)
+    if (transitionIds.length) {
+      d3.select("#profile_photo")
+        .selectAll(transitionIds.join(", "))
+        .transition()
+        .delay(transitionLength + 500)
+        .duration(transitionDuration)
+        .attr("x", d => d.x * pixelWidth)
+        .attr("y", d => d.y * pixelHeight)
+        .attr("width", pixelWidth)
+        .attr("height", pixelHeight)
+        .attr(
+          "transform",
+          d =>
+            "rotate(0," +
+            (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
+            "," +
+            (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
+            ")"
+        )
+        .style("opacity", 1)
+        .transition()
+        // .delay(transitionDelay)
+        .duration(transitionDuration)
+        .style("stroke-width", 0.075)
+    }
   }
 
   function getTransitionIds(id) {
@@ -111,6 +116,14 @@
       .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
       .filter(v => !d3.select(v).empty())
   }
+
+  let items = [
+    { value: "reveal", label: "Reveal" },
+    { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
+    { value: "transition", label: "Transition" },
+  ]
+
+  let sliderValue = 1
 </script>
 
 <div class="flex flex-col items-center">
@@ -118,4 +131,15 @@
     <img src={profilePhotoSrc} />
   </div>
   <svg class="absolute" id="profile_photo" {width} {height} />
+  <div class="flex flex-col items-center mt-4">
+    <Slider
+      wrapperClasses="w-96 text-sm"
+      value={sliderValue}
+      {items}
+      min={0}
+      max={2}
+      hoverable={false}
+      on:valueChange={({ detail: e }) => (sliderValue = e.d)}
+    />
+  </div>
 </div>
