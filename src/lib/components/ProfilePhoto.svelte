@@ -64,7 +64,7 @@
       .duration(pixelTransitionDuration)
       .style("opacity", 0)
       .on("end", () => {
-        transitioningPixels = transitioningPixels.filter(v => v !== d.id)
+        // transitioningPixels = transitioningPixels.filter(v => v !== d.id)
         // // pixels will be recreated when the slider is used
         // // removing those that have been activated for reveal modes.
         // if (transitionSlider.value() != 2) {
@@ -110,7 +110,7 @@
 
     return relativeTransitionPixels
       .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
-      .filter(v => !transitioningPixels.includes(v) && !d3.select(v).empty())
+      .filter(v => !d3.select(v).empty())
       .join(", ")
   }
 </script>
