@@ -2,6 +2,7 @@
   import * as d3 from "d3"
 
   import { Slider } from "svelte-lib/components"
+  import { FireworkShow } from "fireworks/components"
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
   import relativeTransitionIds from "../static/relative_transition_pixels.json"
@@ -36,7 +37,7 @@
       .on("mouseover", pixelMouseOver)
       .on("mouseleave", pixelMouseLeave)
   }
-  
+
   let transitionDelay = 100
   let transitionDuration = 750
   let transitionLength = transitionDelay * 2 + transitionDuration * 2
@@ -81,8 +82,9 @@
       let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
       if (transitionIds.length) {
-        d3.select("#profile_photo")
-          .selectAll(transitionIds.join(", "))
+        let transitionPixels = d3.select("#profile_photo").selectAll(transitionIds.join(", "))
+
+        transitionPixels
           .transition()
           .delay(transitionLength + 500)
           .duration(transitionDuration)
@@ -104,13 +106,7 @@
           // .delay(transitionDelay)
           .duration(transitionDuration)
           .style("stroke-width", 0.075)
-
-        d3.timeout(
-          () => {
-            d3.select("#profile_photo").selectAll(transitionIds.join(", ")).classed("non-reactive", false)
-          },
-          transitionLength + 500 + transitionDuration * 2
-        )
+          .on("end", () => transitionPixels.classed("non-reactive", false))
       }
     }
   }
@@ -163,3 +159,8 @@
     {/if}
   </div>
 </div>
+{#if sliderValue !== 2 && revealed.length / pixels.length >= 0.9}
+  <div class="non-reactive fixed top-0 left-0">
+    <FireworkShow />
+  </div>
+{/if}
