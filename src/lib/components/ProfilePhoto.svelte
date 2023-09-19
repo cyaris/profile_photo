@@ -3,7 +3,7 @@
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
-  import relativeTransitionPixels from "../static/relative_transition_pixels.json"
+  import relativeTransitionIds from "../static/relative_transition_pixels.json"
 
   let width
   let height
@@ -36,12 +36,11 @@
   let pixelTransitionDuration = 750
   let pixelTransitionLength = pixelTransitionDelay * 2 + pixelTransitionDuration * 2
 
-  let transitioningPixels = []
   let pixelMouseOver = function (d) {
-    let transitionSelect = getTransitionSelect(d3.select(this).attr("id"))
+    let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
     d3.select("#profile_photo")
-      .selectAll(transitionSelect)
+      .selectAll(transitionIds.join(", "))
       .style("stroke-width", 0.3)
       .transition()
       .delay(pixelTransitionDelay)
@@ -63,23 +62,23 @@
       .delay(pixelTransitionDelay)
       .duration(pixelTransitionDuration)
       .style("opacity", 0)
-      .on("end", () => {
-        // transitioningPixels = transitioningPixels.filter(v => v !== d.id)
-        // // pixels will be recreated when the slider is used
-        // // removing those that have been activated for reveal modes.
-        // if (transitionSlider.value() != 2) {
-        //   d3.select(this).remove()
-        // }
-      })
+    // .on("end", () => {
+    //   // pixels will be recreated when the slider is used
+    //   // removing those that have been activated for reveal modes.
+    //   if (transitionSlider.value() != 2) {
+    //     d3.select(this).remove()
+    //   }
+    // })
   }
 
   let pixelMouseLeave = function (d) {
     // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
     // if (transitionSlider.value() == 2) {
 
-    let transitionSelect = getTransitionSelect(d3.select(this).attr("id"))
+    let transitionIds = getTransitionIds(d3.select(this).attr("id"))
+
     d3.select("#profile_photo")
-      .selectAll(transitionSelect)
+      .selectAll(transitionIds.join(", "))
       .transition()
       .delay(pixelTransitionLength + 500)
       .duration(pixelTransitionDuration)
@@ -101,17 +100,15 @@
       .delay(pixelTransitionDelay)
       .duration(pixelTransitionDuration)
       .style("stroke-width", 0.075)
-    // }
   }
 
-  function getTransitionSelect(id) {
+  function getTransitionIds(id) {
     let x = parseInt(id.split("y")[0].substring(1))
     let y = parseInt(id.split("y")[1])
 
-    return relativeTransitionPixels
+    return relativeTransitionIds
       .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
       .filter(v => !d3.select(v).empty())
-      .join(", ")
   }
 </script>
 
