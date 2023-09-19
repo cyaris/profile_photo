@@ -11,11 +11,12 @@
   let height
   let pixelWidth
   let pixelHeight
+  // TODO: fix bug where img renders at 5px less than height variable.
+  let imgHeightDifference = 5
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
-      // TODO: fix bug where img renders at 5px less than height variable.
-      pixelHeight = (height - 5) / Math.max(...pixels.map(v => v.y + 1))
+      pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
   }
