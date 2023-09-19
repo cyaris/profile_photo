@@ -39,11 +39,14 @@
   let transitionDelay = 100
   let transitionDuration = 750
   let transitionLength = transitionDelay * 2 + transitionDuration * 2
-
+  let revealed = []
   let pixelMouseOver = function (d) {
     let transitionIds = getTransitionIds(d3.select(this).attr("id")).filter(v => !d3.select(v).classed("non-reactive"))
 
     if (transitionIds.length) {
+      if ([0, 1].includes(sliderValue)) {
+        revealed = [...revealed, ...transitionIds]
+      }
       d3.select("#profile_photo")
         .selectAll(transitionIds.join(", "))
         .classed("non-reactive", true)
@@ -146,9 +149,14 @@
       hoverable={false}
       on:valueChange={({ detail: e }) => {
         sliderValue = e.d
+        revealed = []
         d3.selectAll(".pixels").remove()
         appendPixels()
       }}
     />
+  </div>
+  <div class="flex flex-col items-center mt-4">
+    <div>Hover on my face!</div>
+    <div>Percent revealed: {((revealed.length / pixels.length) * 100).toFixed(1).replace(/\.0+$/, "")}%</div>
   </div>
 </div>
