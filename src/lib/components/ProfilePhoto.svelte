@@ -27,7 +27,6 @@
       .enter()
       .append("rect")
       .attr("class", "pixels")
-      // .classed("non-reactive", false)
       .attr("id", d => d.id)
       .attr("x", d => d.x * pixelWidth)
       .attr("y", d => d.y * pixelHeight)
@@ -42,7 +41,6 @@
 
   let transitionDelay = 100
   let transitionDuration = 750
-  let transitionLength = transitionDelay * 2 + transitionDuration * 2
   let revealed = []
   let pixelMouseOver = function (d) {
     let transitionIds = getTransitionIds(d3.select(this).attr("id")).filter(v => !d3.select(v).classed("non-reactive"))
@@ -88,7 +86,7 @@
 
         transitionPixels
           .transition()
-          .delay(transitionLength + 500)
+          .delay(transitionDelay * 2 + transitionDuration * 2 + 500)
           .duration(transitionDuration)
           .attr("x", d => d.x * pixelWidth)
           .attr("y", d => d.y * pixelHeight)
@@ -169,7 +167,7 @@
   <div class="flex-col w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img src={profilePhotoSrc} />
   </div>
-  <svg class="absolute" id="profile_photo" {width} {height}>
+  <svg class="absolute overflow-visible" id="profile_photo" {width} {height}>
     <g id="laser_eye_canvas"></g>
     <g id="pixel_canvas"></g>
   </svg>
@@ -189,7 +187,7 @@
           // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
           // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
           laserEyesTimer = d3.interval(executeLaserEyes, 3000)
-        } else {
+        } else if (laserEyesTimer) {
           laserEyesTimer.stop()
         }
         d3.selectAll(".pixels").remove()
