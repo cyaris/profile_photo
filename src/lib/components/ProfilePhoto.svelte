@@ -147,8 +147,8 @@
       // this delay is increasingly long for each circle
       // additional seconds are added so that the eyes are stay red for a few seconds before transitioning
       .delay(i * 225 + 500)
-      .duration(2000)
-      .attr("r", 200)
+      .duration(3000)
+      .attr("r", 300)
       .style("stroke-width", 0)
       .style("stroke-opacity", 0)
       .on("end", () => laserEyes.remove())
