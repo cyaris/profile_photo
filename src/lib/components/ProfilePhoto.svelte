@@ -83,9 +83,9 @@
       let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
       if (transitionIds.length) {
-        let transitionPixels = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
+        let rects = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
 
-        transitionPixels
+        rects
           .transition()
           .delay(transitionDelay * 2 + transitionDuration * 2 + 500)
           .duration(transitionDuration)
@@ -107,7 +107,7 @@
           // .delay(transitionDelay)
           .duration(transitionDuration)
           .style("stroke-width", 0.075)
-          .on("end", () => transitionPixels.classed("non-reactive", false))
+          .on("end", () => rects.classed("non-reactive", false))
       }
     }
   }
@@ -132,7 +132,7 @@
   }
 
   let createLaserEyeWave = function (i, cxInput, cyInput) {
-    let laserEyes = d3
+    let circles = d3
       .select("#laser_eye_canvas")
       .append("circle")
       .attr("cx", cxInput)
@@ -142,7 +142,7 @@
       .style("stroke", "#cc0000")
       .style("stroke-width", 7.5)
 
-    laserEyes
+    circles
       .transition()
       // this delay is increasingly long for each circle
       // additional seconds are added so that the eyes are stay red for a few seconds before transitioning
@@ -151,7 +151,7 @@
       .attr("r", 300)
       .style("stroke-width", 0)
       .style("stroke-opacity", 0)
-      .on("end", () => laserEyes.remove())
+      .on("end", () => circles.remove())
   }
 
   let items = [
