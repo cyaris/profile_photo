@@ -12,10 +12,11 @@
   let pixelWidth
   let pixelHeight
   // TODO: fix bug where img renders at 5px less than height variable.
-  let imgHeightDifference = 5
+  let imgHeightDifference
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
+      imgHeightDifference = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
       pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
@@ -126,8 +127,8 @@
   let executeLaserEyes = function (d) {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
-      createLaserEyeWave(i, 177.5, 201.25)
-      createLaserEyeWave(i, 246.75, 197.75)
+      createLaserEyeWave(i, width * 0.44, (height - imgHeightDifference) * 0.5)
+      createLaserEyeWave(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
     })
   }
 
@@ -165,8 +166,8 @@
 </script>
 
 <div class="flex flex-col items-center">
-  <div class="flex-col w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
-    <img src={profilePhotoSrc} />
+  <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
+    <img id="profilePhoto" src={profilePhotoSrc} />
   </div>
   <svg class="absolute overflow-visible" id="profile_photo" {width} {height}>
     <g id="laser_eye_canvas"></g>
