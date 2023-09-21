@@ -112,12 +112,12 @@
   let executeLaserEyes = function (d) {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
-      createLaserEyeWave(i, width * 0.44, (height - imgHeightDifference) * 0.5)
-      createLaserEyeWave(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
+      executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
+      executeLaserEye(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
     })
   }
 
-  let createLaserEyeWave = function (i, cxInput, cyInput) {
+  let executeLaserEye = function (i, cxInput, cyInput) {
     let circles = d3
       .select("#laser_eye_canvas")
       .append("circle")
