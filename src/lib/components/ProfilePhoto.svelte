@@ -12,12 +12,12 @@
   let pixelWidth
   let pixelHeight
   // TODO: fix bug where img renders at 5px less than height variable.
-  let imgHeightDifference
+  let heightApplicable
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
-      imgHeightDifference = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
-      pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
+      heightApplicable = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
+      pixelHeight = heightApplicable / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
   }
@@ -127,8 +127,8 @@
   let executeLaserEyes = function (d) {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
-      createLaserEyeWave(i, width * 0.44, (height - imgHeightDifference) * 0.5)
-      createLaserEyeWave(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
+      createLaserEyeWave(i, width * 0.44, heightApplicable * 0.5)
+      createLaserEyeWave(i, width * 0.6125, heightApplicable * 0.49)
     })
   }
 
