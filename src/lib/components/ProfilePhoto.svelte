@@ -81,7 +81,7 @@
 
         rects
           .transition()
-          .delay(transitionDelay * 2 + transitionDuration * 2 + 500)
+          .delay(transitionDelay * 2 + transitionDuration * 2 + 300)
           .duration(transitionDuration)
           .attr("x", d => d.x * pixelWidth)
           .attr("y", d => d.y * pixelHeight)
