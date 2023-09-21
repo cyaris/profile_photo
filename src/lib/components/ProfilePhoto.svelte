@@ -12,12 +12,13 @@
   let pixelWidth
   let pixelHeight
   // TODO: fix bug where img renders at 5px less than height variable.
-  let heightApplicable
+  let imgHeightDifference
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
-      heightApplicable = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
-      pixelHeight = heightApplicable / Math.max(...pixels.map(v => v.y + 1))
+      let clientHeight = d3.select("#profilePhoto").node().clientHeight
+      imgHeightDifference = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
+      pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
   }
@@ -58,19 +59,11 @@
         .transition()
         .delay(transitionDelay)
         .duration(transitionDuration)
-        .attr("x", d => d.x * pixelWidth + 1.5)
-        .attr("y", d => d.y * pixelHeight - 1)
+        .attr("x", d => d.x * pixelWidth + pixelWidth)
+        .attr("y", d => d.y * pixelHeight + pixelHeight)
         .attr("width", pixelWidth / 1.5)
         .attr("height", pixelHeight / 1.5)
-        .attr(
-          "transform",
-          d =>
-            "rotate(45," +
-            (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-            "," +
-            (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-            ")"
-        )
+        .attr("transform", d => "rotate(45," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
         .transition()
         .delay(transitionDelay)
         .duration(transitionDuration)
@@ -94,15 +87,7 @@
           .attr("y", d => d.y * pixelHeight)
           .attr("width", pixelWidth)
           .attr("height", pixelHeight)
-          .attr(
-            "transform",
-            d =>
-              "rotate(0," +
-              (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-              "," +
-              (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-              ")"
-          )
+          .attr("transform", d => "rotate(0," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
           .style("opacity", 1)
           .transition()
           // .delay(transitionDelay)
@@ -127,8 +112,8 @@
   let executeLaserEyes = function (d) {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
-      createLaserEyeWave(i, width * 0.44, heightApplicable * 0.5)
-      createLaserEyeWave(i, width * 0.6125, heightApplicable * 0.49)
+      createLaserEyeWave(i, width * 0.44, (height - imgHeightDifference) * 0.5)
+      createLaserEyeWave(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
     })
   }
 
