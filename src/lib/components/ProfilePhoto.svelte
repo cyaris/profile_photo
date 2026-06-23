@@ -158,7 +158,7 @@
     <g id="laser_eye_canvas"></g>
     <g id="pixel_canvas"></g>
   </svg>
-  <div class="flex flex-col items-center mt-4">
+  <div class="mt-4 flex flex-col items-center">
     <Slider
       wrapperClasses="w-80 text-sm"
       value={sliderValue}
@@ -183,7 +183,7 @@
     />
   </div>
 
-  <div class="flex flex-col items-center mt-4">
+  <div class="mt-4 flex flex-col items-center">
     <div class="text-xl">Hover on my face!</div>
     {#if sliderValue !== 2}
       <div class="mt-1">
@@ -193,7 +193,7 @@
   </div>
 </div>
 {#if sliderValue !== 2 && revealed.length / pixels.length >= 0.9}
-  <div class="non-reactive fixed top-0 left-0">
+  <div class="non-reactive fixed left-0 top-0">
     <FireworkShow />
   </div>
 {/if}
