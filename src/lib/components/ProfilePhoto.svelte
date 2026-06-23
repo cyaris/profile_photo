@@ -12,10 +12,12 @@
   let pixelWidth
   let pixelHeight
   // TODO: fix bug where img renders at 5px less than height variable.
-  let imgHeightDifference = 5
+  let imgHeightDifference
   $: {
     if (width && height) {
       pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
+      let clientHeight = d3.select("#profilePhoto").node().clientHeight
+      imgHeightDifference = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
       pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
       appendPixels()
     }
@@ -57,19 +59,11 @@
         .transition()
         .delay(transitionDelay)
         .duration(transitionDuration)
-        .attr("x", d => d.x * pixelWidth + 1.5)
-        .attr("y", d => d.y * pixelHeight - 1)
+        .attr("x", d => d.x * pixelWidth + pixelWidth / 2 - 1.5)
+        .attr("y", d => d.y * pixelHeight - pixelHeight / 2)
         .attr("width", pixelWidth / 1.5)
         .attr("height", pixelHeight / 1.5)
-        .attr(
-          "transform",
-          d =>
-            "rotate(45," +
-            (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-            "," +
-            (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-            ")"
-        )
+        .attr("transform", d => "rotate(45," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
         .transition()
         .delay(transitionDelay)
         .duration(transitionDuration)
@@ -83,31 +77,23 @@
       let transitionIds = getTransitionIds(d3.select(this).attr("id"))
 
       if (transitionIds.length) {
-        let transitionPixels = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
+        let rects = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
 
-        transitionPixels
+        rects
           .transition()
-          .delay(transitionDelay * 2 + transitionDuration * 2 + 500)
+          .delay(transitionDelay * 2 + transitionDuration * 2 + 300)
           .duration(transitionDuration)
           .attr("x", d => d.x * pixelWidth)
           .attr("y", d => d.y * pixelHeight)
           .attr("width", pixelWidth)
           .attr("height", pixelHeight)
-          .attr(
-            "transform",
-            d =>
-              "rotate(0," +
-              (d.x * pixelWidth + (pixelWidth - pixelWidth / 1.5) / 2) +
-              "," +
-              (d.y * pixelHeight + (pixelHeight - pixelHeight / 1.5)) +
-              ")"
-          )
+          .attr("transform", d => "rotate(0," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
           .style("opacity", 1)
           .transition()
           // .delay(transitionDelay)
           .duration(transitionDuration)
           .style("stroke-width", 0.075)
-          .on("end", () => transitionPixels.classed("non-reactive", false))
+          .on("end", () => rects.classed("non-reactive", false))
       }
     }
   }
@@ -126,13 +112,13 @@
   let executeLaserEyes = function (d) {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
-      createLaserEyeWave(i, 177.5, 201.25)
-      createLaserEyeWave(i, 246.75, 197.75)
+      executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
+      executeLaserEye(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
     })
   }
 
-  let createLaserEyeWave = function (i, cxInput, cyInput) {
-    let laserEyes = d3
+  let executeLaserEye = function (i, cxInput, cyInput) {
+    let circles = d3
       .select("#laser_eye_canvas")
       .append("circle")
       .attr("cx", cxInput)
@@ -142,7 +128,7 @@
       .style("stroke", "#cc0000")
       .style("stroke-width", 7.5)
 
-    laserEyes
+    circles
       .transition()
       // this delay is increasingly long for each circle
       // additional seconds are added so that the eyes are stay red for a few seconds before transitioning
@@ -151,7 +137,7 @@
       .attr("r", 300)
       .style("stroke-width", 0)
       .style("stroke-opacity", 0)
-      .on("end", () => laserEyes.remove())
+      .on("end", () => circles.remove())
   }
 
   let items = [
@@ -165,8 +151,8 @@
 </script>
 
 <div class="flex flex-col items-center">
-  <div class="flex-col w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
-    <img src={profilePhotoSrc} />
+  <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
+    <img id="profilePhoto" src={profilePhotoSrc} />
   </div>
   <svg class="absolute overflow-visible" id="profile_photo" {width} {height}>
     <g id="laser_eye_canvas"></g>
