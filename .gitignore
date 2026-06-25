@@ -1,31 +1,8 @@
-# hidden files.
-**/.DS_Store
+frontend/.svelte-kit/
+frontend/dist/
+frontend/node_modules/
 
-# hidden folders.
-**/dist
-**/.git
-**/.svelte-kit
-**/.vscode
-**/.venv
-**/.ipynb_checkpoints
+backend/src/__pycache__/
+backend/*.egg-info/
 
-**/__pycache__
-**/*.egg-info
-
-# all .env except for .env.example.
-**/.env
-**/.env.*
-**/!.env.example
-
-!**/.gitkeep
-
-**/build
-**/node_modules
-**/package
-
-# files for PNPM, and YARN.
-**/pnpm-lock.yaml
-**/yarn.lock
-
-# generated files.
-**/pixels.json
+frontend/src/lib/static/pixels.json
