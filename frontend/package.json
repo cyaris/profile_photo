@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "linklocal": "^2.8.2",
-    "svelte-lib": "file:../svelte-lib",
-    "fireworks": "file:../fireworks"
+    "svelte-lib": "file:../../svelte-lib",
+    "fireworks": "file:../../fireworks"
   }
 }
