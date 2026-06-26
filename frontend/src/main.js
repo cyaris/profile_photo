@@ -9,6 +9,4 @@ div.classList.add("profile-photo")
 let script = document.currentScript
 script.parentNode.insertBefore(div, script)
 
-new ProfilePhoto({
-  target: div,
-})
+new ProfilePhoto({target: div})
