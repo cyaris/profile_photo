@@ -1,11 +1,12 @@
 <script>
-  import { select } from "d3-selection"
   import "d3-transition"
-  import { interval } from "d3-timer"
-  import { onDestroy } from "svelte"
 
-  import { Slider } from "svelte-lib/components"
+  import { select } from "d3-selection"
+  import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
+  import { onDestroy } from "svelte"
+  import { Slider } from "svelte-lib/components"
+
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
   import relativeTransitionIds from "../static/relative_transition_pixels.json"
