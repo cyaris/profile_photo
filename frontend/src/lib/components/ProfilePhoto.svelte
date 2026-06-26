@@ -1,5 +1,8 @@
 <script>
-  import * as d3 from "d3"
+  import { select } from "d3-selection"
+  import "d3-transition"
+  import { interval } from "d3-timer"
+  import { onDestroy } from "svelte"
 
   import { Slider } from "svelte-lib/components"
   import { FireworkShow } from "fireworks/components"
@@ -7,52 +10,65 @@
   import pixels from "../static/pixels.json"
   import relativeTransitionIds from "../static/relative_transition_pixels.json"
 
+  const pixelColumnCount = Math.max(...pixels.map(v => v.x + 1))
+  const pixelRowCount = Math.max(...pixels.map(v => v.y + 1))
+  const pixelIds = new Set(pixels.map(v => v.id))
+
   let width
   let height
   let pixelWidth
   let pixelHeight
+  let profilePhoto
+  let pixelCanvas
+  let laserEyeCanvas
   // TODO: fix bug where img renders at 5px less than height variable.
   let imgHeightDifference
   $: {
-    if (width && height) {
-      pixelWidth = width / Math.max(...pixels.map(v => v.x + 1))
-      let clientHeight = d3.select("#profilePhoto").node().clientHeight
-      imgHeightDifference = Math.max(height - d3.select("#profilePhoto").node().clientHeight, 0)
-      pixelHeight = (height - imgHeightDifference) / Math.max(...pixels.map(v => v.y + 1))
+    if (width && height && profilePhoto && pixelCanvas) {
+      pixelWidth = width / pixelColumnCount
+      imgHeightDifference = Math.max(height - profilePhoto.clientHeight, 0)
+      pixelHeight = (height - imgHeightDifference) / pixelRowCount
       appendPixels()
     }
   }
 
   function appendPixels() {
-    d3.select("#pixel_canvas")
-      .selectAll()
-      .data(pixels)
-      .enter()
-      .append("rect")
-      .attr("class", "pixels")
+    select(pixelCanvas)
+      .selectAll("rect.pixels")
+      .data(pixels, d => d.id)
+      .join(enter =>
+        enter
+          .append("rect")
+          .attr("class", "pixels")
+          .attr("id", d => d.id)
+          .style("stroke", "white")
+          .style("fill", d => d.rgb)
+          .on("mouseover", pixelMouseOver)
+          .on("mouseleave", pixelMouseLeave)
+      )
+      .interrupt()
+      .classed("non-reactive", false)
       .attr("id", d => d.id)
       .attr("x", d => d.x * pixelWidth)
       .attr("y", d => d.y * pixelHeight)
       .attr("width", pixelWidth)
       .attr("height", pixelHeight)
-      .style("stroke", "white")
+      .attr("transform", null)
+      .style("opacity", 1)
       .style("stroke-width", 0.075)
-      .style("fill", d => d.rgb)
-      .on("mouseover", pixelMouseOver)
-      .on("mouseleave", pixelMouseLeave)
   }
 
   let transitionDelay = 100
   let transitionDuration = 750
   let revealed = []
-  let pixelMouseOver = function (d) {
-    let transitionIds = getTransitionIds(d3.select(this).attr("id")).filter(v => !d3.select(v).classed("non-reactive"))
+  let pixelMouseOver = function () {
+    let transitionIds = getTransitionIds(select(this).attr("id")).filter(v => !select(v).classed("non-reactive"))
 
     if (transitionIds.length) {
       if (sliderValue !== 2) {
         revealed = [...revealed, ...transitionIds]
       }
-      d3.select("#pixel_canvas")
+      select(pixelCanvas)
         .selectAll(transitionIds.join(", "))
         .classed("non-reactive", true)
         .style("stroke-width", 0.3)
@@ -71,13 +87,13 @@
     }
   }
 
-  let pixelMouseLeave = function (d) {
+  let pixelMouseLeave = function () {
     // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
     if (sliderValue == 2) {
-      let transitionIds = getTransitionIds(d3.select(this).attr("id"))
+      let transitionIds = getTransitionIds(select(this).attr("id"))
 
       if (transitionIds.length) {
-        let rects = d3.select("#pixel_canvas").selectAll(transitionIds.join(", "))
+        let rects = select(pixelCanvas).selectAll(transitionIds.join(", "))
 
         rects
           .transition()
@@ -104,12 +120,12 @@
 
     return relativeTransitionIds
       .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
-      .filter(v => !d3.select(v).empty())
+      .filter(v => pixelIds.has(v.slice(1)))
   }
 
   // credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
   // I took what was there and made adjustments launchXLocd on preference and version differences, but the basic foundation was all set up on that page.
-  let executeLaserEyes = function (d) {
+  let executeLaserEyes = function () {
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
       // appending two laser eyes, each with manually inputted x/y values.
       executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
@@ -118,8 +134,7 @@
   }
 
   let executeLaserEye = function (i, cxInput, cyInput) {
-    let circles = d3
-      .select("#laser_eye_canvas")
+    let circles = select(laserEyeCanvas)
       .append("circle")
       .attr("cx", cxInput)
       .attr("cy", cyInput)
@@ -148,15 +163,38 @@
 
   let sliderValue = 0
   let laserEyesTimer
+
+  function stopLaserEyes() {
+    if (laserEyesTimer) {
+      laserEyesTimer.stop()
+      laserEyesTimer = undefined
+    }
+  }
+
+  function handleSliderValueChange({ detail: e }) {
+    sliderValue = e.d
+    revealed = []
+    if (sliderValue == 1) {
+      stopLaserEyes()
+      // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
+      // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
+      laserEyesTimer = interval(executeLaserEyes, 3000)
+    } else {
+      stopLaserEyes()
+    }
+    appendPixels()
+  }
+
+  onDestroy(stopLaserEyes)
 </script>
 
 <div class="flex flex-col items-center">
   <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
-    <img id="profilePhoto" src={profilePhotoSrc} />
+    <img bind:this={profilePhoto} src={profilePhotoSrc} alt="Charlie Yaris" />
   </div>
   <svg class="absolute overflow-visible" id="profile_photo" {width} {height}>
-    <g id="laser_eye_canvas"></g>
-    <g id="pixel_canvas"></g>
+    <g bind:this={laserEyeCanvas}></g>
+    <g bind:this={pixelCanvas}></g>
   </svg>
   <div class="mt-4 flex flex-col items-center">
     <Slider
@@ -167,19 +205,7 @@
       max={2}
       hoverable={false}
       springValues={{ stiffness: 1, damping: 1 }}
-      on:valueChange={({ detail: e }) => {
-        sliderValue = e.d
-        revealed = []
-        if (sliderValue == 1) {
-          // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
-          // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
-          laserEyesTimer = d3.interval(executeLaserEyes, 3000)
-        } else if (laserEyesTimer) {
-          laserEyesTimer.stop()
-        }
-        d3.selectAll(".pixels").remove()
-        appendPixels()
-      }}
+      on:valueChange={handleSliderValueChange}
     />
   </div>
 

@@ -19,6 +19,9 @@
     "rollup:watch": "rollup -c rollup.config.js -w"
   },
   "dependencies": {
+    "d3-selection": "^3.0.0",
+    "d3-timer": "^3.0.1",
+    "d3-transition": "^3.0.1",
     "linklocal": "^2.8.2",
     "svelte-lib": "file:../../svelte-lib",
     "fireworks": "file:../../fireworks"
