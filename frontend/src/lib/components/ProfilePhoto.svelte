@@ -9,11 +9,25 @@
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
-  import relativeTransitionIds from "../static/relative_transition_pixels.json"
+
+  export let transitionPixelRadius = 2
 
   const pixelColumnCount = Math.max(...pixels.map(v => v.x + 1))
   const pixelRowCount = Math.max(...pixels.map(v => v.y + 1))
   const pixelIds = new Set(pixels.map(v => v.id))
+
+  function getRelativeTransitionIds(radius) {
+    let roundedRadius = Math.max(Math.floor(radius), 0)
+
+    return Array.from({ length: roundedRadius * 2 + 1 }, (_, xIndex) =>
+      Array.from({ length: roundedRadius * 2 + 1 }, (_, yIndex) => ({
+        x: xIndex - roundedRadius,
+        y: yIndex - roundedRadius,
+      }))
+    ).flat()
+  }
+
+  $: relativeTransitionIds = getRelativeTransitionIds(transitionPixelRadius)
 
   let width
   let height
@@ -24,44 +38,24 @@
   let laserEyeCanvas
   // TODO: fix bug where img renders at 5px less than height variable.
   let imgHeightDifference
-  $: {
-    if (width && height && profilePhoto && pixelCanvas) {
-      pixelWidth = width / pixelColumnCount
-      imgHeightDifference = Math.max(height - profilePhoto.clientHeight, 0)
-      pixelHeight = (height - imgHeightDifference) / pixelRowCount
-      appendPixels()
-    }
-  }
-
-  function appendPixels() {
-    select(pixelCanvas)
-      .selectAll("rect.pixels")
-      .data(pixels, d => d.id)
-      .join(enter =>
-        enter
-          .append("rect")
-          .attr("class", "pixels")
-          .attr("id", d => d.id)
-          .style("stroke", "white")
-          .style("fill", d => d.rgb)
-          .on("mouseover", pixelMouseOver)
-          .on("mouseleave", pixelMouseLeave)
-      )
-      .interrupt()
-      .classed("non-reactive", false)
-      .attr("id", d => d.id)
-      .attr("x", d => d.x * pixelWidth)
-      .attr("y", d => d.y * pixelHeight)
-      .attr("width", pixelWidth)
-      .attr("height", pixelHeight)
-      .attr("transform", null)
-      .style("opacity", 1)
-      .style("stroke-width", 0.075)
-  }
 
   let transitionDelay = 100
   let transitionDuration = 750
   let revealed = []
+  let sliderValue = 0
+  let laserEyesTimer
+  // TODO: Come back to this with a more thoughtful scale.
+  let placeholderColorScale = () => "black"
+
+  function getTransitionIds(id) {
+    let x = parseInt(id.split("y")[0].substring(1))
+    let y = parseInt(id.split("y")[1])
+
+    return relativeTransitionIds
+      .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
+      .filter(v => pixelIds.has(v.slice(1)))
+  }
+
   let pixelMouseOver = function () {
     let transitionIds = getTransitionIds(select(this).attr("id")).filter(v => !select(v).classed("non-reactive"))
 
@@ -115,24 +109,43 @@
     }
   }
 
-  function getTransitionIds(id) {
-    let x = parseInt(id.split("y")[0].substring(1))
-    let y = parseInt(id.split("y")[1])
-
-    return relativeTransitionIds
-      .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
-      .filter(v => pixelIds.has(v.slice(1)))
+  function appendPixels() {
+    select(pixelCanvas)
+      .selectAll("rect.pixels")
+      .data(pixels, d => d.id)
+      .join(enter =>
+        enter
+          .append("rect")
+          .attr("class", "pixels")
+          .attr("id", d => d.id)
+          .style("stroke", "white")
+          .style("fill", d => d.rgb)
+          .on("mouseover", pixelMouseOver)
+          .on("mouseleave", pixelMouseLeave)
+      )
+      .interrupt()
+      .classed("non-reactive", false)
+      .attr("id", d => d.id)
+      .attr("x", d => d.x * pixelWidth)
+      .attr("y", d => d.y * pixelHeight)
+      .attr("width", pixelWidth)
+      .attr("height", pixelHeight)
+      .attr("transform", null)
+      .style("opacity", 1)
+      .style("stroke-width", 0.075)
   }
+
+  $: {
+    if (width && height && profilePhoto && pixelCanvas) {
+      pixelWidth = width / pixelColumnCount
+      imgHeightDifference = Math.max(height - profilePhoto.clientHeight, 0)
+      pixelHeight = (height - imgHeightDifference) / pixelRowCount
+      appendPixels()
+    }
+  }
+
   // credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
   // I took what was there and made adjustments launchXLocd on preference and version differences, but the basic foundation was all set up on that page.
-  let executeLaserEyes = function () {
-    Array.from({ length: 4 }, (_, index) => index).forEach(i => {
-      // appending two laser eyes, each with manually inputted x/y values.
-      executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
-      executeLaserEye(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
-    })
-  }
-
   let executeLaserEye = function (i, cxInput, cyInput) {
     let circles = select(laserEyeCanvas)
       .append("circle")
@@ -155,16 +168,19 @@
       .on("end", () => circles.remove())
   }
 
+  let executeLaserEyes = function () {
+    Array.from({ length: 4 }, (_, index) => index).forEach(i => {
+      // appending two laser eyes, each with manually inputted x/y values.
+      executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
+      executeLaserEye(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
+    })
+  }
+
   let items = [
     { value: "reveal", label: "Reveal" },
     { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
     { value: "transition", label: "Transition" },
   ]
-
-  let sliderValue = 0
-  let laserEyesTimer
-  // TODO: Come back to this with a more thoughtful scale.
-  let placeholderColorScale = () => "black"
 
   function stopLaserEyes() {
     if (laserEyesTimer) {
