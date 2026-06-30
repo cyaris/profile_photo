@@ -1,9 +1,10 @@
 .DS_Store
-.svelte-kit
 
-build
-dist
-node_modules
-package
+frontend/.svelte-kit/
+frontend/dist/
+frontend/node_modules/
 
-**/pixels.json
+backend/src/__pycache__/
+backend/*.egg-info/
+
+frontend/src/lib/static/pixels.json
