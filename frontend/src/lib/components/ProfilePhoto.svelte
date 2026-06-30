@@ -212,17 +212,16 @@
   <div class="mt-4 flex flex-col items-center">
     <div class="text-xl">Hover on my face!</div>
     {#if sliderValue !== 2}
-      <div class="mt-1">
-        <GaugeChart
-          value={(revealed.length / pixels.length) * 100}
-          addPercentSign={true}
-          title="Pixels Revealed"
-          titlePosition="bottom"
-          decimalPlaces={1}
-          gaugeColorScale={placeholderColorScale}
-          metricColorScale={placeholderColorScale}
-        />
-      </div>
+      <GaugeChart
+        value={(revealed.length / pixels.length) * 100}
+        addPercentSign={true}
+        title="Pixels Revealed"
+        titlePosition="bottom"
+        decimalPlaces={1}
+        titleClasses="text-sm font-semibold leading-tight text-gray-700"
+        gaugeColorScale={placeholderColorScale}
+        metricColorScale={placeholderColorScale}
+      />
     {/if}
   </div>
 </div>
