@@ -5,7 +5,7 @@
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy } from "svelte"
-  import { Slider } from "svelte-lib/components"
+  import { GaugeChart, Slider } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -123,7 +123,6 @@
       .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
       .filter(v => pixelIds.has(v.slice(1)))
   }
-
   // credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
   // I took what was there and made adjustments launchXLocd on preference and version differences, but the basic foundation was all set up on that page.
   let executeLaserEyes = function () {
@@ -164,6 +163,8 @@
 
   let sliderValue = 0
   let laserEyesTimer
+  // TODO: Come back to this with a more thoughtful scale.
+  let placeholderColorScale = () => "black"
 
   function stopLaserEyes() {
     if (laserEyesTimer) {
@@ -175,13 +176,12 @@
   function handleSliderValueChange({ detail: e }) {
     sliderValue = e.d
     revealed = []
+    stopLaserEyes()
+
     if (sliderValue == 1) {
-      stopLaserEyes()
       // manually inputting a number slightly larger the how long it will take for final laser eye circle will finish transition (delay included).
       // the final transition was calculated by adding the delay from the highest i value with the duration seconds.
       laserEyesTimer = interval(executeLaserEyes, 3000)
-    } else {
-      stopLaserEyes()
     }
     appendPixels()
   }
@@ -209,12 +209,19 @@
       on:valueChange={handleSliderValueChange}
     />
   </div>
-
   <div class="mt-4 flex flex-col items-center">
     <div class="text-xl">Hover on my face!</div>
     {#if sliderValue !== 2}
       <div class="mt-1">
-        Percent revealed: {((revealed.length / pixels.length) * 100).toFixed(1).replace(/\.0+$/, "")}%
+        <GaugeChart
+          value={(revealed.length / pixels.length) * 100}
+          addPercentSign={true}
+          title="Pixels Revealed"
+          titlePosition="bottom"
+          decimalPlaces={1}
+          gaugeColorScale={placeholderColorScale}
+          metricColorScale={placeholderColorScale}
+        />
       </div>
     {/if}
   </div>
