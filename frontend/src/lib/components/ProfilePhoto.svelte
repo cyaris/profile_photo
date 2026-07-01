@@ -181,7 +181,7 @@
 
   let items = [
     { value: "reveal", label: "Reveal" },
-    { value: "reveal_laser_vision", label: "Reveal My Laser Vision" },
+    { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
     { value: "transition", label: "Transition" },
   ]
 
