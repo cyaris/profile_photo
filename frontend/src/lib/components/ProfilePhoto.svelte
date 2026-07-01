@@ -1,11 +1,12 @@
 <script>
   import "d3-transition"
 
+  import { scaleLinear } from "d3-scale"
   import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy } from "svelte"
-  import { GaugeChart, Slider } from "svelte-lib/components"
+  import { GaugeChart, Loading, Slider } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -44,8 +45,10 @@
   let revealed = []
   let sliderValue = 0
   let laserEyesTimer
-  // TODO: Come back to this with a more thoughtful scale.
-  let placeholderColorScale = () => "black"
+
+  const gaugeColorScale = scaleLinear().domain([0, 1]).range(["#F7FCF5", "#006D2C"]).clamp(true)
+
+  const fireworkRevealTrigger = 0.9
 
   function getTransitionIds(id) {
     let x = parseInt(id.split("y")[0].substring(1))
@@ -213,35 +216,42 @@
     <g bind:this={laserEyeCanvas}></g>
     <g bind:this={pixelCanvas}></g>
   </svg>
-  <div class="mt-4 flex flex-col items-center">
-    <Slider
-      wrapperClasses="w-80 text-sm"
-      value={sliderValue}
-      {items}
-      min={0}
-      max={2}
-      hoverable={false}
-      springValues={{ stiffness: 1, damping: 1 }}
-      on:valueChange={handleSliderValueChange}
-    />
-  </div>
-  <div class="mt-4 flex flex-col items-center">
-    <div class="text-xl">Hover on my face!</div>
-    {#if sliderValue !== 2}
-      <GaugeChart
-        value={(revealed.length / pixels.length) * 100}
-        addPercentSign={true}
-        title="Pixels Revealed"
-        titlePosition="bottom"
-        decimalPlaces={1}
-        titleClasses="text-sm font-semibold leading-tight text-gray-700"
-        gaugeColorScale={placeholderColorScale}
-        metricColorScale={placeholderColorScale}
+  {#if laserEyeCanvas && pixelCanvas}
+    <div class="mt-2 flex flex-col items-center">
+      <Slider
+        wrapperClasses="w-80 text-sm"
+        value={sliderValue}
+        {items}
+        min={0}
+        max={2}
+        hoverable={false}
+        springValues={{ stiffness: 1, damping: 1 }}
+        on:valueChange={handleSliderValueChange}
       />
-    {/if}
-  </div>
+    </div>
+    <div class="mt-4 flex flex-col items-center">
+      <div class="text-xl">Hover on my face!</div>
+      {#if sliderValue !== 2}
+        <div class="w-52">
+          <GaugeChart
+            value={(revealed.length / pixels.length) * 100}
+            addPercentSign={true}
+            title="Pixels Revealed"
+            titlePosition="bottom"
+            decimalPlaces={1}
+            titleClasses="text-xl"
+            textClasses="font-normal"
+            definition="Can you reveal 90%?"
+            {gaugeColorScale}
+          />
+        </div>
+      {/if}
+    </div>
+  {:else}
+    <Loading classes="mt-6 h-12 w-12" image="circle" />
+  {/if}
 </div>
-{#if sliderValue !== 2 && revealed.length / pixels.length >= 0.9}
+{#if sliderValue !== 2 && revealed.length / pixels.length >= fireworkRevealTrigger}
   <div class="non-reactive fixed left-0 top-0">
     <FireworkShow />
   </div>

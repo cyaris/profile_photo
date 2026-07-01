@@ -9,6 +9,7 @@
     "build": "vite build",
     "package": "vite package",
     "preview": "vite preview",
+    "preview:open": "vite preview --open",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write '**/*.{css,cjs,html,js,json,svelte,svg}'",
@@ -19,11 +20,15 @@
     "rollup:watch": "rollup -c rollup.config.js -w"
   },
   "dependencies": {
+    "d3-scale": "4",
+    "d3-scale-chromatic": "3",
     "d3-selection": "3",
     "d3-timer": "3",
     "d3-transition": "3",
     "fireworks": "file:../../fireworks",
     "linklocal": "^2.8.2",
-    "svelte-lib": "file:../../svelte-lib"
+    "svelte": "4.2.20",
+    "svelte-lib": "file:../../svelte-lib",
+    "vite": "^4.4.2"
   }
 }
