@@ -1,6 +1,8 @@
 <script>
   import "d3-transition"
 
+  import { scaleSequential, scaleThreshold } from "d3-scale"
+  import { interpolateGreens } from "d3-scale-chromatic"
   import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
@@ -44,8 +46,15 @@
   let revealed = []
   let sliderValue = 0
   let laserEyesTimer
-  // TODO: Come back to this with a more thoughtful scale.
-  let placeholderColorScale = () => "black"
+
+  const gaugeColorScale = scaleSequential(interpolateGreens).domain([0, 1]).clamp(true)
+
+  const fireworkRevealTrigger = 0.9
+
+  const metricColorScale = scaleThreshold()
+    .domain([fireworkRevealTrigger])
+    // First color originated from Tailwind "red-500"; second is interpolateGreens(1).
+    .range(["#ef4444", "#00441b"])
 
   function getTransitionIds(id) {
     let x = parseInt(id.split("y")[0].substring(1))
@@ -228,20 +237,24 @@
   <div class="mt-4 flex flex-col items-center">
     <div class="text-xl">Hover on my face!</div>
     {#if sliderValue !== 2}
-      <GaugeChart
-        value={(revealed.length / pixels.length) * 100}
-        addPercentSign={true}
-        title="Pixels Revealed"
-        titlePosition="bottom"
-        decimalPlaces={1}
-        titleClasses="text-sm font-semibold leading-tight text-gray-700"
-        gaugeColorScale={placeholderColorScale}
-        metricColorScale={placeholderColorScale}
-      />
+      <div class="w-52">
+        <GaugeChart
+          value={(revealed.length / pixels.length) * 100}
+          addPercentSign={true}
+          title="Pixels Revealed"
+          titlePosition="bottom"
+          decimalPlaces={1}
+          titleClasses="text-xl"
+          textClasses="font-medium"
+          definition="Can you reveal 90%?"
+          {gaugeColorScale}
+          {metricColorScale}
+        />
+      </div>
     {/if}
   </div>
 </div>
-{#if sliderValue !== 2 && revealed.length / pixels.length >= 0.9}
+{#if sliderValue !== 2 && revealed.length / pixels.length >= fireworkRevealTrigger}
   <div class="non-reactive fixed left-0 top-0">
     <FireworkShow />
   </div>
