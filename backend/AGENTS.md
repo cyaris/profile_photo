@@ -3,7 +3,6 @@
 ## Backend Python
 
 - Use `src/utils.py` for backend logging. Backend scripts should initialize loggers with `initialize_logger`.
-- Keep the pixel-data generation script named `src/generate_pixel_data.py`; it reads from and writes to `../frontend/src/lib/static`.
 - Declare backend runtime dependencies in `pyproject.toml`.
 - Run `isort` from `backend` so it uses the repository's `[tool.isort]` settings.
 
