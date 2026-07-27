@@ -45,6 +45,9 @@
   let revealed = []
   let sliderValue = 0
   let laserEyesTimer
+  let activePointerId
+  let activePointerPixel
+  let activePointerTarget
 
   const gaugeColorScale = scaleLinear().domain([0, 1]).range(["#F7FCF5", "#006D2C"]).clamp(true)
 
@@ -59,8 +62,14 @@
       .filter(v => pixelIds.has(v.slice(1)))
   }
 
-  let pixelMouseOver = function () {
-    let transitionIds = getTransitionIds(select(this).attr("id")).filter(v => !select(v).classed("non-reactive"))
+  function activatePixel(pixelElement) {
+    if (select(pixelElement).classed("non-reactive")) {
+      return
+    }
+
+    let transitionIds = getTransitionIds(select(pixelElement).attr("id")).filter(
+      v => !select(v).classed("non-reactive")
+    )
 
     if (transitionIds.length) {
       if (sliderValue !== 2) {
@@ -85,10 +94,14 @@
     }
   }
 
-  let pixelMouseLeave = function () {
+  let pixelMouseOver = function () {
+    activatePixel(this)
+  }
+
+  function deactivatePixel(pixelElement) {
     // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
     if (sliderValue == 2) {
-      let transitionIds = getTransitionIds(select(this).attr("id"))
+      let transitionIds = getTransitionIds(select(pixelElement).attr("id"))
 
       if (transitionIds.length) {
         let rects = select(pixelCanvas).selectAll(transitionIds.join(", "))
@@ -110,6 +123,10 @@
           .on("end", () => rects.classed("non-reactive", false))
       }
     }
+  }
+
+  let pixelMouseLeave = function () {
+    deactivatePixel(this)
   }
 
   function appendPixels() {
@@ -136,6 +153,90 @@
       .attr("transform", null)
       .style("opacity", 1)
       .style("stroke-width", 0.075)
+  }
+
+  function getPixelFromPoint(event) {
+    if (!pixelCanvas || !pixelWidth || !pixelHeight) {
+      return undefined
+    }
+
+    let svgBounds = event.currentTarget.getBoundingClientRect()
+    let x = Math.floor((event.clientX - svgBounds.left) / pixelWidth)
+    let y = Math.floor((event.clientY - svgBounds.top) / pixelHeight)
+
+    if (x < 0 || y < 0 || x >= pixelColumnCount || y >= pixelRowCount) {
+      return undefined
+    }
+
+    let pixelId = "x" + String(x) + "y" + String(y)
+
+    return pixelIds.has(pixelId) ? pixelCanvas.querySelector("#" + pixelId) : undefined
+  }
+
+  function updateActivePointerPixel(event) {
+    let pixelElement = getPixelFromPoint(event)
+
+    if (pixelElement !== activePointerPixel) {
+      if (activePointerPixel) {
+        deactivatePixel(activePointerPixel)
+      }
+      activePointerPixel = pixelElement
+    }
+
+    if (activePointerPixel) {
+      activatePixel(activePointerPixel)
+    }
+  }
+
+  function isPrimaryTouchPointer(event) {
+    return event.isPrimary && ["pen", "touch"].includes(event.pointerType)
+  }
+
+  function handlePixelPointerDown(event) {
+    if (!isPrimaryTouchPointer(event) || activePointerId !== undefined || !getPixelFromPoint(event)) {
+      return
+    }
+
+    activePointerId = event.pointerId
+    activePointerTarget = event.currentTarget
+    activePointerTarget.setPointerCapture?.(activePointerId)
+    updateActivePointerPixel(event)
+  }
+
+  function handlePixelPointerMove(event) {
+    if (event.pointerId !== activePointerId) {
+      return
+    }
+
+    event.preventDefault()
+    updateActivePointerPixel(event)
+  }
+
+  function releaseActivePointer() {
+    if (activePointerPixel) {
+      deactivatePixel(activePointerPixel)
+    }
+    if (activePointerId !== undefined && activePointerTarget?.hasPointerCapture?.(activePointerId)) {
+      activePointerTarget.releasePointerCapture(activePointerId)
+    }
+    activePointerId = undefined
+    activePointerPixel = undefined
+    activePointerTarget = undefined
+  }
+
+  function handlePixelPointerUp(event) {
+    if (event.pointerId !== activePointerId) {
+      return
+    }
+
+    updateActivePointerPixel(event)
+    releaseActivePointer()
+  }
+
+  function handlePixelPointerCancel(event) {
+    if (event.pointerId === activePointerId) {
+      releaseActivePointer()
+    }
   }
 
   $: {
@@ -205,14 +306,28 @@
     appendPixels()
   }
 
-  onDestroy(stopLaserEyes)
+  onDestroy(() => {
+    stopLaserEyes()
+    releaseActivePointer()
+  })
 </script>
 
 <div class="flex flex-col items-center">
   <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img bind:this={profilePhoto} src={profilePhotoSrc} alt="Charlie Yaris" />
   </div>
-  <svg class="absolute overflow-visible" id="profile_photo" {width} {height}>
+  <!-- Touch and pen drags do not mouseover sibling SVG rects, so map the point to the pixel grid instead. -->
+  <svg
+    class="absolute overflow-visible"
+    id="profile_photo"
+    style="touch-action: none;"
+    {width}
+    {height}
+    on:pointerdown={handlePixelPointerDown}
+    on:pointermove={handlePixelPointerMove}
+    on:pointerup={handlePixelPointerUp}
+    on:pointercancel={handlePixelPointerCancel}
+  >
     <g bind:this={laserEyeCanvas}></g>
     <g bind:this={pixelCanvas}></g>
   </svg>
