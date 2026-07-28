@@ -23,7 +23,7 @@
     return Array.from({ length: roundedRadius * 2 + 1 }, (_, xIndex) =>
       Array.from({ length: roundedRadius * 2 + 1 }, (_, yIndex) => ({
         x: xIndex - roundedRadius,
-        y: yIndex - roundedRadius,
+        y: yIndex - roundedRadius
       }))
     ).flat()
   }
@@ -283,7 +283,7 @@
   let items = [
     { value: "reveal", label: "Reveal" },
     { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
-    { value: "transition", label: "Transition" },
+    { value: "transition", label: "Transition" }
   ]
 
   function stopLaserEyes() {
