@@ -54,7 +54,7 @@ jobs:
           production="$INPUT_PRODUCTION"
           dry_run="$INPUT_DRY_RUN"
           default_svelte_lib_ref="main"
-          if [[ "${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}" == "dev" || "${GITHUB_REF_NAME:-}" == "dev" ]]; then
+          if [[ "${GITHUB_BASE_REF:-}" == "dev" || "${GITHUB_REF_NAME:-}" == "dev" ]]; then
             default_svelte_lib_ref="dev"
           fi
 

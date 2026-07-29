@@ -93,7 +93,8 @@ clean checkout does not include the ignored generated pixel data file; run produ
 The workflow can be dispatched from the GitHub Actions UI with **Actions > CI > Run workflow**. Manual dispatch exposes
 `svelte-lib-ref` and `fireworks-ref` inputs for choosing the sibling `svelte-lib` and `fireworks` refs checked out for
 local `file:` dependencies. Automatic push and pull-request runs use `SVELTE_LIB_REF` and `FIREWORKS_REF` repository
-variables when present, falling back to `main` and `dev`.
+variables when present. `svelte-lib-ref` falls back to `dev` for pull requests targeting `dev` and pushes or manual runs
+on `dev`, then `main`; `fireworks-ref` falls back to `dev`.
 
 ### `.github/workflows/rollup-upload.yml`
 
@@ -106,23 +107,25 @@ dispatched from the GitHub Actions UI with **Actions > Rollup upload > Run workf
 `dry-run` to print S3 operations without writing objects. Automatic push runs always use production upload names and
 disable `dry-run`.
 
-Set the repository variable `SVELTE_LIB_REF` to control which `svelte-lib` branch, tag, or SHA the automatic production
-workflow checks out for both the local file dependency and the shared rollup upload action. Set `FIREWORKS_REF` to
-control the same behavior for the local `fireworks` dependency. Manual dispatch exposes both values as inputs.
+Set the repository variable `SVELTE_LIB_REF` to control which `svelte-lib` ref the automatic production workflow checks
+out for both the local file dependency and the shared rollup upload action. Production `SVELTE_LIB_REF` values should be
+pinned 40-character commit SHAs. Set `FIREWORKS_REF` to control the same behavior for the local `fireworks` dependency.
+Manual dispatch exposes both values as inputs.
 
-The workflow checks out `cyaris/shared-automation` for the shared rollup upload action and separately checks out the private `svelte-lib` repository as a local dependency.
-Provide `CHECKOUT_TOKEN` with read access to `svelte-lib` and any private local dependency repositories. AWS
-authentication uses `AWS_ROLLUP_UPLOAD_ROLE_ARN` when present, otherwise it expects AWS access-key secrets.
+The workflow checks out `cyaris/shared-automation` for the shared rollup upload action and separately checks out the
+private `svelte-lib` repository as a local dependency. Provide `CHECKOUT_TOKEN` with read access to `svelte-lib` and any
+private local dependency repositories. AWS authentication uses `AWS_ROLLUP_UPLOAD_ROLE_ARN` when present, otherwise it
+expects AWS access-key secrets.
 
 ### `.github/workflows/auto-release.yml`
 
-The `Auto release` workflow runs after a pull request is closed and delegates to the shared
-`cyaris/shared-automation/.github/workflows/auto-release.yml` workflow only when that pull request was merged. It evaluates the
-merge commit against the repository release policy, asks the configured OpenAI model whether the merge warrants a
-release, publishes a GitHub release when warranted, and comments the outcome on the pull request.
+The `Auto release` workflow runs from manual dispatch only and delegates to the shared
+`cyaris/shared-automation/.github/workflows/auto-release.yml` workflow. It reconciles commit history through a selected
+commit against existing GitHub releases, updates existing release notes and titles when enabled, and creates missing
+releases when warranted by the repository release policy.
 
-The workflow can also be dispatched from the GitHub Actions UI with **Actions > Auto release > Run workflow**. Manual
-dispatch accepts optional `release-sha`, `pr-number`, `shared-automation-ref`, and `publish` inputs; when `release-sha`
-is blank, it evaluates the workflow SHA. Release decisions require `OPENAI_API_KEY`; missing credentials or failed
-OpenAI API requests fail the workflow. `RELEASE_TOKEN` and `CHECKOUT_TOKEN` can be provided when the default token cannot
-create releases or read private repositories.
+The workflow can be dispatched from the GitHub Actions UI with **Actions > Auto release > Run workflow**. Manual dispatch
+accepts optional `release-sha`, `shared-automation-ref`, `publish`, and `update-existing` inputs; when `release-sha` is
+blank, it reconciles through the current default branch tip. Release reconciliation requires `OPENAI_API_KEY`; missing
+credentials or failed OpenAI API requests fail the workflow. `RELEASE_TOKEN` and `CHECKOUT_TOKEN` can be provided when
+the default token cannot create releases or read private repositories.
