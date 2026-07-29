@@ -19,14 +19,14 @@ on:
         default: false
       svelte-lib-ref:
         description: svelte-lib ref used for the local file dependency.
-        required: true
+        required: false
         type: string
-        default: dev
+        default: ""
       fireworks-ref:
         description: fireworks ref used for the local file dependency.
         required: true
         type: string
-        default: cy_dev
+        default: dev
 
 jobs:
   resolve-inputs:
@@ -53,8 +53,13 @@ jobs:
 
           production="$INPUT_PRODUCTION"
           dry_run="$INPUT_DRY_RUN"
-          svelte_lib_ref="${INPUT_SVELTE_LIB_REF:-${VAR_SVELTE_LIB_REF:-dev}}"
-          fireworks_ref="${INPUT_FIREWORKS_REF:-${VAR_FIREWORKS_REF:-cy_dev}}"
+          default_svelte_lib_ref="main"
+          if [[ "${GITHUB_BASE_REF:-}" == "dev" || "${GITHUB_REF_NAME:-}" == "dev" ]]; then
+            default_svelte_lib_ref="dev"
+          fi
+
+          svelte_lib_ref="${INPUT_SVELTE_LIB_REF:-${VAR_SVELTE_LIB_REF:-$default_svelte_lib_ref}}"
+          fireworks_ref="${INPUT_FIREWORKS_REF:-${VAR_FIREWORKS_REF:-dev}}"
 
           if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             production="true"
@@ -74,7 +79,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: cyaris/svelte-lib/.github/workflows/rollup-upload.yml@dev
+    uses: cyaris/shared-automation/.github/workflows/rollup-upload.yml@main
     with:
       working-directory: frontend
       dist-directory: frontend/dist
@@ -90,4 +95,9 @@ jobs:
       svelte-lib-ref: ${{ needs.resolve-inputs.outputs.svelte_lib_ref }}
       local-dependency-repositories: |
         cyaris/fireworks:fireworks:${{ needs.resolve-inputs.outputs.fireworks_ref }}
-    secrets: inherit
+    secrets:
+      CHECKOUT_TOKEN: ${{ secrets.CHECKOUT_TOKEN }}
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
