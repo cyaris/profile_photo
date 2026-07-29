@@ -97,8 +97,7 @@ pixel data file; run production builds after regenerating `frontend/src/lib/stat
 The `Rollup upload` workflow calls the
 [shared rollup-upload workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollup-uploadyml) to build
 the frontend rollup bundle and upload it to `s3://cyaris.github.io/profile_photo/`. It checks out `svelte-lib` and
-`fireworks` as local dependencies. Automatic push runs fall back to a dry-run build when the repository has no AWS
-upload credentials configured. Production `SVELTE_LIB_REF` and `FIREWORKS_REF` values must be pinned 40-character
+`fireworks` as local dependencies. Production `SVELTE_LIB_REF` and `FIREWORKS_REF` values must be pinned 40-character
 commit SHAs.
 
 ### `.github/workflows/auto-release.yml`
