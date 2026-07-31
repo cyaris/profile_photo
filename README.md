@@ -46,7 +46,8 @@ npm run format:check
 
 ## Pixel data generation
 
-The backend utility reads `frontend/src/lib/static/favicon.png` and writes `frontend/src/lib/static/pixels.json`.
+The backend utility reads `frontend/src/lib/static/favicon.png` and writes `frontend/src/lib/static/pixels.json`. The
+generated JSON is committed so clean GitHub Actions checkouts can build the Rollup bundle.
 
 From `backend`, install the Python project in editable mode if needed:
 
@@ -88,8 +89,8 @@ inputs, and secrets are documented in the
 
 The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the
 [shared CI workflow](https://github.com/cyaris/shared-automation#githubworkflowsciyml) with
-`working-directory: frontend`. CI skips `npm run build` because a clean checkout does not include the ignored generated
-pixel data file; run production builds after regenerating `frontend/src/lib/static/pixels.json`. Manual dispatch exposes
+`working-directory: frontend`. CI skips `npm run build`; run local production builds after regenerating
+`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Manual dispatch exposes
 `svelte-lib-ref` and `fireworks-ref`; automatic runs use `SVELTE_LIB_REF` and `FIREWORKS_REF` when set.
 
 ### `.github/workflows/rollup-upload.yml`

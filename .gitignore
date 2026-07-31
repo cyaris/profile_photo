@@ -7,5 +7,3 @@ frontend/node_modules/
 
 backend/src/__pycache__/
 backend/*.egg-info/
-
-frontend/src/lib/static/pixels.json
