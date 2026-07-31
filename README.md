@@ -106,3 +106,10 @@ commit SHAs.
 The `Auto release` workflow runs from manual dispatch only and calls the
 [shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
 repository contributes `.github/release-policy.yml` overrides.
+
+### `.github/workflows/release-please.yml`
+
+The `Release Please` workflow runs on pushes to `main` and manual dispatches by `cyaris`, using
+`release-please-config.json` and `.release-please-manifest.json` for future releases. Historical reconciliation is
+complete through `8477c3d454451d2980cac141213d0c1930341e05`; `auto-release.yml` remains available for manual historical
+repair, while Release Please manages later commits.
