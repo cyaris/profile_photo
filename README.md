@@ -111,8 +111,8 @@ repository contributes `.github/release-policy.yml` overrides.
 
 The `Release Please` workflow runs on pushes to `main` and manual dispatches by `cyaris`, using
 `release-please-config.json` and `.release-please-manifest.json` for future releases. Historical reconciliation is
-complete through `8477c3d454451d2980cac141213d0c1930341e05`; `auto-release.yml` remains available for manual historical
-repair, while Release Please manages later commits.
+complete through the handoff recorded in `release-please-config.json`; `auto-release.yml` remains available for manual
+historical repair, while Release Please manages later commits.
 
 ### `.github/workflows/workflow-validation.yml`
 
