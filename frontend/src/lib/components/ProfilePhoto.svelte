@@ -352,8 +352,6 @@
             addPercentSign={true}
             label="Pixels Revealed"
             decimalPlaces={1}
-            labelClasses="text-base leading-none"
-            textClasses="text-base font-normal leading-none"
             definition="Can you reveal 90%?"
             {progressBarColorScale}
           />
