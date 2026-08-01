@@ -1,12 +1,11 @@
 <script>
   import "d3-transition"
 
-  import { scaleLinear } from "d3-scale"
   import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy } from "svelte"
-  import { GaugeChart, Loading, Slider } from "svelte-lib/components"
+  import { Loading, ProgressBarChart, Slider } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -49,7 +48,7 @@
   let activePointerPixel
   let activePointerTarget
 
-  const gaugeColorScale = scaleLinear().domain([0, 1]).range(["#F7FCF5", "#006D2C"]).clamp(true)
+  const progressBarColorScale = () => "#006D2C"
 
   const fireworkRevealTrigger = 0.9
 
@@ -347,17 +346,14 @@
     <div class="mt-4 flex flex-col items-center">
       <div class="text-xl">Hover on my face!</div>
       {#if sliderValue !== 2}
-        <div class="w-52">
-          <GaugeChart
+        <div class="w-64">
+          <ProgressBarChart
             value={(revealed.length / pixels.length) * 100}
             addPercentSign={true}
-            title="Pixels Revealed"
-            titlePosition="bottom"
+            label="Pixels Revealed"
             decimalPlaces={1}
-            titleClasses="text-xl"
-            textClasses="font-normal"
             definition="Can you reveal 90%?"
-            {gaugeColorScale}
+            {progressBarColorScale}
           />
         </div>
       {/if}
