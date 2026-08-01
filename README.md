@@ -85,21 +85,15 @@ These local wrappers inherit their reusable implementations from `cyaris/shared-
 inputs, and secrets are documented in the
 [shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
 
-### `.github/workflows/ci.yml`
+### `.github/workflows/rollup.yml`
 
-The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the
-[shared CI workflow](https://github.com/cyaris/shared-automation#githubworkflowsciyml) with
-`working-directory: frontend`. CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Manual dispatch exposes
-`svelte-lib-ref` and `fireworks-ref`; automatic runs use `SVELTE_LIB_REF` and `FIREWORKS_REF` when set.
-
-### `.github/workflows/rollup-upload.yml`
-
-The `Rollup upload` workflow calls the
-[shared rollup-upload workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollup-uploadyml) to build
-the frontend rollup bundle and upload it to `s3://cyaris.github.io/profile_photo/`. It checks out `svelte-lib` and
-`fireworks` as local dependencies. Production `SVELTE_LIB_REF` and `FIREWORKS_REF` values must be pinned 40-character
-commit SHAs.
+The `Rollup` workflow runs on pushes, pull requests, and manual dispatch, then calls the
+[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
+`working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
+`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `main` and
+`master` pushes or manual dispatches to build the frontend rollup bundle and upload it to
+`s3://cyaris.github.io/profile_photo/`. The workflow checks out `svelte-lib` and `fireworks` as local dependencies.
+Production `SVELTE_LIB_REF` and `FIREWORKS_REF` values must be pinned 40-character commit SHAs.
 
 ### `.github/workflows/auto-release.yml`
 
