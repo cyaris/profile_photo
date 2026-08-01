@@ -1,7 +1,6 @@
 <script>
   import "d3-transition"
 
-  import { scaleLinear } from "d3-scale"
   import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
@@ -49,7 +48,7 @@
   let activePointerPixel
   let activePointerTarget
 
-  const progressBarColorScale = scaleLinear().domain([0, 1]).range(["#F7FCF5", "#006D2C"]).clamp(true)
+  const progressBarColorScale = () => "#006D2C"
 
   const fireworkRevealTrigger = 0.9
 
@@ -353,8 +352,8 @@
             addPercentSign={true}
             label="Pixels Revealed"
             decimalPlaces={1}
-            labelClasses="text-base"
-            textClasses="text-base font-normal"
+            labelClasses="text-base leading-none"
+            textClasses="text-base font-normal leading-none"
             definition="Can you reveal 90%?"
             {progressBarColorScale}
           />
