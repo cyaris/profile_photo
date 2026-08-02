@@ -3,15 +3,11 @@ name: Rollup
 on:
   push:
     branches:
+      - dev
       - main
   pull_request:
   workflow_dispatch:
     inputs:
-      production:
-        description: Upload bundle.* files instead of staged test_bundle.* files.
-        required: true
-        type: boolean
-        default: false
       dry-run:
         description: Print the S3 operations without writing objects.
         required: true
@@ -40,7 +36,6 @@ jobs:
       s3-prefix: profile_photo
       aws-region: us-east-2
       aws-role-to-assume: ${{ vars.AWS_ROLLUP_UPLOAD_ROLE_ARN }}
-      manual-production: ${{ inputs.production || false }}
       manual-dry-run: ${{ inputs.dry-run || false }}
       rollup-local-dependency-repositories: |
         cyaris/fireworks:fireworks:main
