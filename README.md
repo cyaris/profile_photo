@@ -87,13 +87,14 @@ inputs, and secrets are documented in the
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `main`, pull requests, and manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `main` and
-`master` pushes or manual dispatches to build the frontend rollup bundle and upload it to
+`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `main`
+pushes or manual dispatches to build the frontend rollup bundle and upload it to
 `s3://cyaris.github.io/profile_photo/`. The workflow checks out `svelte-lib` and `fireworks` as local dependencies.
-Production `SVELTE_LIB_REF` and `FIREWORKS_REF` values must be pinned 40-character commit SHAs.
+Both dependencies use their latest `main` commits. The shared workflow resolves those branches to exact commit SHAs
+before checkout.
 
 ### `.github/workflows/auto-release.yml`
 
