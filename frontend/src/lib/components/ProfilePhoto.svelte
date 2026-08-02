@@ -41,7 +41,7 @@
 
   let transitionDelay = 100
   let transitionDuration = 750
-  let revealed = []
+  let revealedPixelIds = new Set()
   let sliderValue = 0
   let laserEyesTimer
   let activePointerId
@@ -51,6 +51,8 @@
   const progressBarColorScale = () => "#006D2C"
 
   const fireworkRevealTrigger = 0.9
+
+  $: revealedPixelRatio = revealedPixelIds.size / pixels.length
 
   function getTransitionIds(id) {
     let x = parseInt(id.split("y")[0].substring(1))
@@ -72,7 +74,7 @@
 
     if (transitionIds.length) {
       if (sliderValue !== 2) {
-        revealed = [...revealed, ...transitionIds]
+        revealedPixelIds = new Set([...revealedPixelIds, ...transitionIds])
       }
       select(pixelCanvas)
         .selectAll(transitionIds.join(", "))
@@ -294,7 +296,7 @@
 
   function handleSliderValueChange({ detail: e }) {
     sliderValue = e.d
-    revealed = []
+    revealedPixelIds = new Set()
     stopLaserEyes()
 
     if (sliderValue == 1) {
@@ -348,7 +350,7 @@
       {#if sliderValue !== 2}
         <div class="w-64">
           <ProgressBarChart
-            value={(revealed.length / pixels.length) * 100}
+            value={revealedPixelRatio * 100}
             addPercentSign={true}
             label="Pixels Revealed"
             decimalPlaces={1}
@@ -362,8 +364,10 @@
     <Loading classes="mt-6 h-12 w-12" image="circle" />
   {/if}
 </div>
-{#if sliderValue !== 2 && revealed.length / pixels.length >= fireworkRevealTrigger}
+{#if laserEyeCanvas && pixelCanvas && sliderValue !== 2}
   <div class="non-reactive fixed left-0 top-0">
-    <FireworkShow />
+    {#key sliderValue}
+      <FireworkShow fireworkShow={revealedPixelRatio >= fireworkRevealTrigger} />
+    {/key}
   </div>
 {/if}
