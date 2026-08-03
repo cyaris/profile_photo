@@ -1,1 +1,1 @@
-export { default as ProfilePhoto } from "./ProfilePhoto.svelte"
+export { default as ProfilePhoto } from "./App.svelte"
