@@ -5,7 +5,7 @@
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy } from "svelte"
-  import { Loading, ProgressBarChart, Slider } from "svelte-lib/components"
+  import { Loading, ProgressBar, Slider } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -349,7 +349,7 @@
       <div class="text-xl">Hover on my face!</div>
       {#if sliderValue !== 2}
         <div class="w-64">
-          <ProgressBarChart
+          <ProgressBar
             value={revealedPixelRatio * 100}
             addPercentSign={true}
             label="Pixels Revealed"
