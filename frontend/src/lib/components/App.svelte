@@ -313,7 +313,7 @@
   })
 </script>
 
-<div class="flex flex-col items-center">
+<div class="mb-8 flex flex-col items-center">
   <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img bind:this={profilePhoto} src={profilePhotoSrc} alt="Charlie Yaris" />
   </div>
