@@ -169,7 +169,7 @@
       return undefined
     }
 
-    let pixelId = "x" + String(x) + "y" + String(y)
+    let pixelId = "x" + String(x + 1) + "y" + String(y + 1)
 
     return pixelIds.has(pixelId) ? pixelCanvas.querySelector("#" + pixelId) : undefined
   }
