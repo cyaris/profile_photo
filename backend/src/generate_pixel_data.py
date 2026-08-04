@@ -34,7 +34,7 @@ def main() -> None:
     y_max = args.y_max
 
     logger.info("Opening source image at %s", FAVICON_PATH)
-    img = Image.open(FAVICON_PATH)
+    img = Image.open(FAVICON_PATH).convert("RGB")
 
     img_small = img.resize((x_max, y_max), resample=Image.BILINEAR)
 
