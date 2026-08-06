@@ -5,7 +5,7 @@
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy } from "svelte"
-  import { Loading, ProgressBarChart, Slider } from "svelte-lib/components"
+  import { Loading, ProgressBar, Slider } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -169,7 +169,7 @@
       return undefined
     }
 
-    let pixelId = "x" + String(x) + "y" + String(y)
+    let pixelId = "x" + String(x + 1) + "y" + String(y + 1)
 
     return pixelIds.has(pixelId) ? pixelCanvas.querySelector("#" + pixelId) : undefined
   }
@@ -313,7 +313,7 @@
   })
 </script>
 
-<div class="flex flex-col items-center">
+<div class="mb-8 flex flex-col items-center">
   <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
     <img bind:this={profilePhoto} src={profilePhotoSrc} alt="Charlie Yaris" />
   </div>
@@ -349,7 +349,7 @@
       <div class="text-xl">Hover on my face!</div>
       {#if sliderValue !== 2}
         <div class="w-64">
-          <ProgressBarChart
+          <ProgressBar
             value={revealedPixelRatio * 100}
             addPercentSign={true}
             label="Pixels Revealed"
