@@ -97,6 +97,14 @@ and `main` pushes or manual dispatches to build the frontend rollup bundle and u
 their latest `main` commits. The shared workflow resolves those branches to exact commit SHAs before checkout and passes
 the same resolved `fireworks` SHA to CI and upload.
 
+### `.github/workflows/upstream-watch.yml`
+
+The `Upstream Watch` workflow runs daily at 13:18 UTC and on manual dispatch, then calls the
+[shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
+watches `svelte-lib`'s and `fireworks`'s `main` branches and, when either has moved since the last check, dispatches
+this repository's own `Rollup` workflow on `main` so the build picks up the new upstream commit without waiting for a
+push here.
+
 ### `.github/workflows/auto-release.yml`
 
 The `Auto release` workflow runs from manual dispatch only and calls the
