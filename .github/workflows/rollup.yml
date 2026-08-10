@@ -32,8 +32,8 @@ jobs:
       bundle-files: |
         bundle.css:text/css
         bundle.js:application/javascript
-        homepage_bundle.css:text/css
-        homepage_bundle.js:application/javascript
+        bundle2.css:text/css
+        bundle2.js:application/javascript
       s3-bucket: cyaris.github.io
       s3-prefix: profile_photo
       aws-region: us-east-2
