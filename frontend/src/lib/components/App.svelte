@@ -21,7 +21,8 @@
     { value: "reveal", label: "Reveal" },
     { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
     { value: "transition", label: "Transition" },
-    { value: "auto_transition", label: "Auto Transition" }
+    { value: "auto_transition_frames", label: "Auto Transition (Frames)" },
+    { value: "auto_transition_diagonal", label: "Auto Transition (Diagonal)" }
   ]
 
   function getModeValue(mode) {
@@ -79,12 +80,15 @@
   $: activeMode = modeItems[sliderValue]?.value ?? modeItems[0].value
   $: modeSelectValue = modeItems[sliderValue] ?? modeItems[0]
   $: forcedModeValue = getModeValue(forcedMode)
-  $: isAutoTransition = activeMode == "auto_transition"
+  $: isAutoTransitionFrames = activeMode == "auto_transition_frames"
+  $: isAutoTransitionDiagonal = activeMode == "auto_transition_diagonal"
+  $: isAutoTransition = isAutoTransitionFrames || isAutoTransitionDiagonal
   $: isTransitionMode = activeMode == "transition" || isAutoTransition
   $: autoTransitionStepInterval = Number.isFinite(autoTransitionStepDuration)
     ? Math.max(autoTransitionStepDuration, 1)
     : transitionDuration / 32
   $: autoTransitionConfigKey = [
+    activeMode,
     transitionPixelRadius,
     autoTransitionStepInterval,
     pixelColumnCount,
@@ -356,21 +360,21 @@
     return points.map(({ x, y }) => getPixelSelector(x, y)).filter(Boolean)
   }
 
-  function createVerticalAutoTransitionSlice({ x, minY, maxY, cornerIndex }) {
+  function createVerticalAutoTransitionFramesSlice({ x, minY, maxY, cornerIndex }) {
     return {
       cornerIndex,
       ids: getAutoTransitionSliceIds(Array.from({ length: maxY - minY + 1 }, (_, index) => ({ x, y: minY + index })))
     }
   }
 
-  function createHorizontalAutoTransitionSlice({ minX, maxX, y, cornerIndex }) {
+  function createHorizontalAutoTransitionFramesSlice({ minX, maxX, y, cornerIndex }) {
     return {
       cornerIndex,
       ids: getAutoTransitionSliceIds(Array.from({ length: maxX - minX + 1 }, (_, index) => ({ x: minX + index, y })))
     }
   }
 
-  function rotateAutoTransitionSlices(slices, cornerIndex) {
+  function rotateAutoTransitionFramesSlices(slices, cornerIndex) {
     let startIndex = slices.findIndex(slice => slice.cornerIndex == cornerIndex)
 
     if (startIndex <= 0) {
@@ -380,12 +384,12 @@
     return [...slices.slice(startIndex), ...slices.slice(0, startIndex)]
   }
 
-  function createAutoTransitionSlices({ cornerIndex, maxX, maxY, minX, minY, ringWidth }) {
+  function createAutoTransitionFramesSlices({ cornerIndex, maxX, maxY, minX, minY, ringWidth }) {
     let slices = []
 
     for (let x = minX; x <= maxX; x += 1) {
       slices.push(
-        createVerticalAutoTransitionSlice({
+        createVerticalAutoTransitionFramesSlice({
           cornerIndex: x == minX ? 0 : x == maxX ? 1 : undefined,
           maxY: minY + ringWidth - 1,
           minY,
@@ -396,7 +400,7 @@
 
     for (let y = minY + ringWidth; y <= maxY; y += 1) {
       slices.push(
-        createHorizontalAutoTransitionSlice({
+        createHorizontalAutoTransitionFramesSlice({
           cornerIndex: y == maxY ? 2 : undefined,
           maxX,
           minX: maxX - ringWidth + 1,
@@ -407,7 +411,7 @@
 
     for (let x = maxX - ringWidth; x >= minX; x -= 1) {
       slices.push(
-        createVerticalAutoTransitionSlice({
+        createVerticalAutoTransitionFramesSlice({
           cornerIndex: x == minX ? 3 : undefined,
           maxY,
           minY: maxY - ringWidth + 1,
@@ -417,16 +421,16 @@
     }
 
     for (let y = maxY - ringWidth; y >= minY + ringWidth; y -= 1) {
-      slices.push(createHorizontalAutoTransitionSlice({ maxX: minX + ringWidth - 1, minX, y }))
+      slices.push(createHorizontalAutoTransitionFramesSlice({ maxX: minX + ringWidth - 1, minX, y }))
     }
 
-    return rotateAutoTransitionSlices(
+    return rotateAutoTransitionFramesSlices(
       slices.filter(slice => slice.ids.length),
       cornerIndex
     )
   }
 
-  function createAutoTransitionPaths(cornerIndex) {
+  function createAutoTransitionFramesPaths(cornerIndex) {
     let baseRingWidth = getTransitionRegionWidth()
     let minDimension = Math.min(pixelColumnCount, pixelRowCount)
     let ringCount = Math.ceil(minDimension / (baseRingWidth * 2))
@@ -454,11 +458,32 @@
         minX,
         minY,
         ringWidth,
-        slices: createAutoTransitionSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY, ringWidth })
+        slices: createAutoTransitionFramesSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY, ringWidth })
       }
     })
 
     return paths
+  }
+
+  function createAutoTransitionDiagonalPaths(cornerIndex) {
+    let mirrorX = cornerIndex == 1 || cornerIndex == 2
+    let mirrorY = cornerIndex == 2 || cornerIndex == 3
+    let diagonalIds = Array.from({ length: pixelColumnCount + pixelRowCount - 1 }, () => [])
+
+    pixels.forEach(({ x, y, id }) => {
+      let diagonalX = mirrorX ? pixelColumnCount - 1 - x : x
+      let diagonalY = mirrorY ? pixelRowCount - 1 - y : y
+
+      diagonalIds[diagonalX + diagonalY].push("#" + id)
+    })
+
+    return [
+      {
+        activeSliceIds: [],
+        activeSliceIndex: undefined,
+        slices: diagonalIds.filter(ids => ids.length).map(ids => ({ ids }))
+      }
+    ]
   }
 
   function advanceAutoTransition(timestamp) {
@@ -487,7 +512,9 @@
 
     stopAutoTransition({ resetPixels: true })
     autoTransitionKey = nextAutoTransitionKey
-    autoTransitionPaths = createAutoTransitionPaths(Math.floor(Math.random() * 4))
+    autoTransitionPaths = isAutoTransitionDiagonal
+      ? createAutoTransitionDiagonalPaths(Math.floor(Math.random() * 4))
+      : createAutoTransitionFramesPaths(Math.floor(Math.random() * 4))
     autoTransitionFrame = requestAnimationFrame(advanceAutoTransition)
   }
 
@@ -519,30 +546,13 @@
     setModeValue(forcedModeValue)
   }
 
-  $: if (
-    isAutoTransition &&
-    !prefersReducedMotion &&
-    pixelCanvas &&
-    pixelWidth &&
-    pixelHeight &&
-    autoTransitionConfigKey
-  ) {
+  $: if (isAutoTransition && pixelCanvas && pixelWidth && pixelHeight && autoTransitionConfigKey) {
     startAutoTransition(autoTransitionConfigKey)
   }
 
-  $: if (!isAutoTransition || prefersReducedMotion) {
-    stopAutoTransition({ resetPixels: isAutoTransition })
+  $: if (!isAutoTransition) {
+    stopAutoTransition()
   }
-
-  onMount(() => {
-    let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
-    let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
-
-    updatePrefersReducedMotion()
-    reducedMotionQuery.addEventListener("change", updatePrefersReducedMotion)
-
-    return () => reducedMotionQuery.removeEventListener("change", updatePrefersReducedMotion)
-  })
 
   onDestroy(() => {
     stopAutoTransition({ resetPixels: true })
