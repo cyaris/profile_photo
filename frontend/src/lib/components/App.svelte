@@ -4,7 +4,7 @@
   import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
-  import { onDestroy } from "svelte"
+  import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select } from "svelte-lib/components"
 
   import profilePhotoSrc from "../static/favicon.png"
@@ -69,6 +69,7 @@
   let autoTransitionPaths = []
   let autoTransitionLastStepTime
   let autoTransitionKey
+  let prefersReducedMotion = false
 
   const progressBarColorScale = () => "#006D2C"
 
@@ -84,8 +85,6 @@
     ? Math.max(autoTransitionStepDuration, 1)
     : transitionDuration / 32
   $: autoTransitionConfigKey = [
-    pixelWidth,
-    pixelHeight,
     transitionPixelRadius,
     autoTransitionStepInterval,
     pixelColumnCount,
@@ -520,13 +519,30 @@
     setModeValue(forcedModeValue)
   }
 
-  $: if (isAutoTransition && pixelCanvas && pixelWidth && pixelHeight && autoTransitionConfigKey) {
+  $: if (
+    isAutoTransition &&
+    !prefersReducedMotion &&
+    pixelCanvas &&
+    pixelWidth &&
+    pixelHeight &&
+    autoTransitionConfigKey
+  ) {
     startAutoTransition(autoTransitionConfigKey)
   }
 
-  $: if (!isAutoTransition) {
-    stopAutoTransition()
+  $: if (!isAutoTransition || prefersReducedMotion) {
+    stopAutoTransition({ resetPixels: isAutoTransition })
   }
+
+  onMount(() => {
+    let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
+
+    updatePrefersReducedMotion()
+    reducedMotionQuery.addEventListener("change", updatePrefersReducedMotion)
+
+    return () => reducedMotionQuery.removeEventListener("change", updatePrefersReducedMotion)
+  })
 
   onDestroy(() => {
     stopAutoTransition({ resetPixels: true })
