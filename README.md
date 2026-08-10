@@ -1,6 +1,6 @@
 # profile_photo
 
-Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the source image. The frontend lets users reveal a pixel overlay on hover, switch between reveal modes, trigger laser-eye animation, track reveal progress with a gauge, and launch fireworks after enough pixels are uncovered.
+Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the source image. The frontend lets users reveal a pixel overlay on hover, switch between reveal modes, trigger laser-eye animation, run an automated transition mode, track reveal progress with a gauge, and launch fireworks after enough pixels are uncovered.
 
 View the live tool at <a href="https://charlieyaris.com/" target="_blank" rel="noopener noreferrer">charlieyaris.com</a>.
 
@@ -91,11 +91,11 @@ The `Rollup` workflow runs on pushes to `dev` and `main`, pull requests, and man
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
 `frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `dev`
-and `main` pushes or manual dispatches to build the frontend rollup bundle and upload it to
-`s3://cyaris.github.io/profile_photo/`. `main` runs upload unprefixed production bundles, and `dev` runs upload staged
-`test_bundle.*` names. The workflow checks out `svelte-lib` and `fireworks` as local dependencies. Both dependencies use
-their latest `main` commits. The shared workflow resolves those branches to exact commit SHAs before checkout and passes
-the same resolved `fireworks` SHA to CI and upload.
+and `main` pushes or manual dispatches to build the full interactive `bundle.*` assets and the homepage
+`homepage_bundle.*` assets, then upload them to `s3://cyaris.github.io/profile_photo/`. `main` uploads unprefixed
+production bundles, and `dev` uploads staged `test_`-prefixed bundle names. The workflow checks out `svelte-lib` and
+`fireworks` as local dependencies. Both dependencies use their latest `main` commits. The shared workflow resolves
+those branches to exact commit SHAs before checkout and passes the same resolved `fireworks` SHA to CI and upload.
 
 ### `.github/workflows/upstream-watch.yml`
 
