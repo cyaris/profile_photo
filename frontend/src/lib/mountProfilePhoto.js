@@ -1,14 +1,12 @@
 import "svelte-lib/styles/app.css"
 import "svelte-lib/styles/root.css"
 
+import { mountEmbeddedRoot } from "svelte-lib/functions"
+
 import ProfilePhoto from "./components/App.svelte"
 
-export function mountProfilePhoto(props = {}) {
-  let div = document.createElement("div")
-  div.classList.add("profile-photo")
-
-  let script = document.currentScript
-  script.parentNode.insertBefore(div, script)
+export function mountProfilePhoto({ target, ...props } = {}) {
+  let div = mountEmbeddedRoot({ classes: ["profile-photo"], target })
 
   return new ProfilePhoto({ target: div, props })
 }
