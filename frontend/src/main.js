@@ -1,12 +1,3 @@
-import "svelte-lib/styles/app.css"
-import "svelte-lib/styles/root.css"
+import { mountProfilePhoto } from "./lib/mountProfilePhoto.js"
 
-import ProfilePhoto from "./lib/components/App.svelte"
-
-let div = document.createElement("div")
-div.classList.add("profile-photo")
-
-let script = document.currentScript
-script.parentNode.insertBefore(div, script)
-
-new ProfilePhoto({ target: div })
+mountProfilePhoto()
