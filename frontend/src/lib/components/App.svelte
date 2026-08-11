@@ -546,13 +546,30 @@
     setModeValue(forcedModeValue)
   }
 
-  $: if (isAutoTransition && pixelCanvas && pixelWidth && pixelHeight && autoTransitionConfigKey) {
+  $: if (
+    isAutoTransition &&
+    !prefersReducedMotion &&
+    pixelCanvas &&
+    pixelWidth &&
+    pixelHeight &&
+    autoTransitionConfigKey
+  ) {
     startAutoTransition(autoTransitionConfigKey)
   }
 
-  $: if (!isAutoTransition) {
-    stopAutoTransition()
+  $: if (!isAutoTransition || prefersReducedMotion) {
+    stopAutoTransition({ resetPixels: isAutoTransition })
   }
+
+  onMount(() => {
+    let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
+
+    updatePrefersReducedMotion()
+    reducedMotionQuery.addEventListener("change", updatePrefersReducedMotion)
+
+    return () => reducedMotionQuery.removeEventListener("change", updatePrefersReducedMotion)
+  })
 
   onDestroy(() => {
     stopAutoTransition({ resetPixels: true })
