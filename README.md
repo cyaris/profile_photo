@@ -79,6 +79,11 @@ The frontend uses local packages from this workspace:
 
 If either local package changes, rebuild that package before refreshing this app.
 
+## Credits
+
+The laser vision feature's animation builds on the concentric-circles technique from
+[mrtriangle's block](http://bl.ocks.org/mrtriangle/11222485).
+
 ## GitHub Actions Workflows
 
 These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
