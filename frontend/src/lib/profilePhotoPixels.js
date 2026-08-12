@@ -128,10 +128,19 @@ function getPixelRenderState(pixel, state, geometry, timestamp) {
 function drawPixel(context, pixel, renderState) {
   if (renderState.opacity <= 0) return
 
+  if (!renderState.rotation) {
+    context.globalAlpha = renderState.opacity
+    context.fillStyle = pixel.rgb
+    context.lineWidth = renderState.strokeWidth
+    context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
+    context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
+
+    return
+  }
+
   context.save()
   context.globalAlpha = renderState.opacity
   context.fillStyle = pixel.rgb
-  context.strokeStyle = "white"
   context.lineWidth = renderState.strokeWidth
   context.translate(renderState.anchorX, renderState.anchorY)
   context.rotate(renderState.rotation)
@@ -280,6 +289,7 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   if (!context) return false
 
   context.clearRect(0, 0, geometry.width, geometry.height)
+  context.strokeStyle = "white"
   pixels.forEach(pixel =>
     drawPixel(context, pixel, getPixelRenderState(pixel, states[pixel.index], geometry, timestamp))
   )

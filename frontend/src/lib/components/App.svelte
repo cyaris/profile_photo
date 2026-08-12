@@ -426,7 +426,14 @@
 
 <div class="mb-8 flex flex-col items-center">
   <div class="relative w-fit max-w-md" bind:clientWidth={displayWidth} bind:clientHeight={displayHeight}>
-    <img class="block h-auto max-w-full" src={profilePhotoSrc} alt="Charlie Yaris" on:load={scheduleRender} />
+    <img
+      class="block h-auto max-w-full"
+      src={profilePhotoSrc}
+      alt="Charlie Yaris"
+      width={pixelColumnCount}
+      height={pixelRowCount}
+      on:load={scheduleRender}
+    />
     <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
       <g bind:this={laserEyeCanvas}></g>
     </svg>
