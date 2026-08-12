@@ -53,10 +53,6 @@
   let displayHeight
   let pixelCanvas
   let laserEyeCanvas
-  let profilePhoto
-  let profilePhotoNaturalWidth = pixelColumnCount
-  let profilePhotoNaturalHeight = pixelRowCount
-
   let pixelStates = createPixelStates(pixelRecords.length)
   let revealedPixels = createRevealFlags(pixelRecords.length)
   let revealedPixelCount = 0
@@ -99,9 +95,7 @@
           width: displayWidth,
           height: displayHeight,
           cellWidth: displayWidth / pixelColumnCount,
-          cellHeight: displayHeight / pixelRowCount,
-          sourceWidth: profilePhotoNaturalWidth,
-          sourceHeight: profilePhotoNaturalHeight
+          cellHeight: displayHeight / pixelRowCount
         }
       : undefined
   $: geometryKey = geometry ? [geometry.width, geometry.height, pixelColumnCount, pixelRowCount].join(":") : undefined
@@ -323,6 +317,8 @@
       autoTransitionLastStepTime = timestamp
 
       autoTransitionPaths.forEach(path => {
+        if (!path.slices.length) return
+
         let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
 
         deactivatePixelIndexes({
@@ -389,12 +385,6 @@
     }
   }
 
-  function updateProfilePhotoDimensions() {
-    profilePhotoNaturalWidth = profilePhoto?.naturalWidth || pixelColumnCount
-    profilePhotoNaturalHeight = profilePhoto?.naturalHeight || pixelRowCount
-    scheduleRender()
-  }
-
   $: if (pixelCanvas && geometryKey) {
     scheduleRender()
   }
@@ -436,13 +426,7 @@
 
 <div class="mb-8 flex flex-col items-center">
   <div class="relative w-fit max-w-md" bind:clientWidth={displayWidth} bind:clientHeight={displayHeight}>
-    <img
-      bind:this={profilePhoto}
-      class="block h-auto max-w-full"
-      src={profilePhotoSrc}
-      alt="Charlie Yaris"
-      on:load={updateProfilePhotoDimensions}
-    />
+    <img class="block h-auto max-w-full" src={profilePhotoSrc} alt="Charlie Yaris" on:load={scheduleRender} />
     <canvas
       bind:this={pixelCanvas}
       class="absolute left-0 top-0 h-full w-full"
