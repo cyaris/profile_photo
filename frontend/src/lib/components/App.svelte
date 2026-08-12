@@ -44,6 +44,8 @@
   ]
   const progressBarColorScale = () => "#006D2C"
   const fireworkRevealTrigger = 0.9
+  // favicon.png's actual pixel dimensions, not the pixelation grid's column/row count.
+  const profilePhotoNaturalSize = 400
 
   function getModeValue(mode) {
     return modeItems.findIndex(item => item.value == mode)
@@ -430,8 +432,8 @@
       class="block h-auto max-w-full"
       src={profilePhotoSrc}
       alt="Charlie Yaris"
-      width={pixelColumnCount}
-      height={pixelRowCount}
+      width={profilePhotoNaturalSize}
+      height={profilePhotoNaturalSize}
       on:load={scheduleRender}
     />
     <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
