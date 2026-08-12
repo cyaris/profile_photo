@@ -17,6 +17,10 @@ function clamp(value, min = 0, max = 1) {
   return Math.min(Math.max(value, min), max)
 }
 
+function easeCubicInOut(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+}
+
 function getTransitionRegionWidth(radius) {
   return Math.max(Math.floor(radius), 0) * 2 + 1
 }
@@ -63,11 +67,17 @@ function getActivatedPixelDisplay(pixel, geometry) {
   }
 }
 
+function getActivatingProgress(state, timestamp) {
+  return {
+    moveProgress: easeCubicInOut(clamp((timestamp - state.activationStart - transitionDelay) / transitionDuration)),
+    fadeProgress: easeCubicInOut(clamp((timestamp - state.activationStart - transitionFadeDelay) / transitionDuration))
+  }
+}
+
 function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
   let normal = getPixelDisplay(pixel, geometry)
   let activated = getActivatedPixelDisplay(pixel, geometry)
-  let moveProgress = clamp((timestamp - state.activationStart - transitionDelay) / transitionDuration)
-  let fadeProgress = clamp((timestamp - state.activationStart - transitionFadeDelay) / transitionDuration)
+  let { moveProgress, fadeProgress } = getActivatingProgress(state, timestamp)
 
   return {
     x: normal.x + (activated.x - normal.x) * moveProgress,
@@ -85,18 +95,22 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
 function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
   let normal = getPixelDisplay(pixel, geometry)
   let activated = getActivatedPixelDisplay(pixel, geometry)
-  let moveProgress = clamp((timestamp - state.deactivationStart - transitionDeactivateDelay) / transitionDuration)
-  let strokeProgress = clamp(
-    (timestamp - state.deactivationStart - transitionDeactivateDelay - transitionDuration) / transitionDuration
+  let reverseProgress = easeCubicInOut(
+    clamp((timestamp - state.deactivationStart - transitionDeactivateDelay) / transitionDuration)
   )
+  let strokeProgress = easeCubicInOut(
+    clamp((timestamp - state.deactivationStart - transitionDeactivateDelay - transitionDuration) / transitionDuration)
+  )
+  let moveProgress = state.deactivationStartMoveProgress * (1 - reverseProgress)
+  let opacity = state.deactivationStartOpacity + (1 - state.deactivationStartOpacity) * reverseProgress
 
   return {
-    x: activated.x + (normal.x - activated.x) * moveProgress,
-    y: activated.y + (normal.y - activated.y) * moveProgress,
-    width: activated.width + (normal.width - activated.width) * moveProgress,
-    height: activated.height + (normal.height - activated.height) * moveProgress,
-    rotation: finalRotation * (1 - moveProgress),
-    opacity: moveProgress,
+    x: normal.x + (activated.x - normal.x) * moveProgress,
+    y: normal.y + (activated.y - normal.y) * moveProgress,
+    width: normal.width + (activated.width - normal.width) * moveProgress,
+    height: normal.height + (activated.height - normal.height) * moveProgress,
+    rotation: finalRotation * moveProgress,
+    opacity,
     strokeWidth: finalStrokeWidth + (initialStrokeWidth - finalStrokeWidth) * strokeProgress,
     anchorX: normal.anchorX,
     anchorY: normal.anchorY
@@ -245,6 +259,16 @@ export function deactivatePixelIndexes({ indexes, isTransitionMode, now, states 
   indexes.forEach(index => {
     let state = states[index]
     if (state.phase == pixelPhase.idle || state.phase == pixelPhase.deactivating) return
+
+    if (state.phase == pixelPhase.hidden) {
+      state.deactivationStartMoveProgress = 1
+      state.deactivationStartOpacity = 0
+    } else {
+      let { moveProgress, fadeProgress } = getActivatingProgress(state, now)
+
+      state.deactivationStartMoveProgress = moveProgress
+      state.deactivationStartOpacity = 1 - fadeProgress
+    }
 
     state.phase = pixelPhase.deactivating
     state.deactivationStart = now

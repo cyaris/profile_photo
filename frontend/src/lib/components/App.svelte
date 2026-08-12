@@ -427,6 +427,9 @@
 <div class="mb-8 flex flex-col items-center">
   <div class="relative w-fit max-w-md" bind:clientWidth={displayWidth} bind:clientHeight={displayHeight}>
     <img class="block h-auto max-w-full" src={profilePhotoSrc} alt="Charlie Yaris" on:load={scheduleRender} />
+    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
+      <g bind:this={laserEyeCanvas}></g>
+    </svg>
     <canvas
       bind:this={pixelCanvas}
       class="absolute left-0 top-0 h-full w-full"
@@ -439,9 +442,6 @@
       on:pointercancel={handlePixelPointerCancel}
       on:pointerleave={handlePixelPointerLeave}
     ></canvas>
-    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
-      <g bind:this={laserEyeCanvas}></g>
-    </svg>
   </div>
   {#if isProfileReady}
     {#if showModeSelection}
