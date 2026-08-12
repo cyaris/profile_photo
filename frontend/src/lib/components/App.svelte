@@ -9,6 +9,7 @@
 
   import {
     activatePixelIndexes,
+    advanceAutoTransitionPath,
     createAutoTransitionDiagonalPaths,
     createAutoTransitionFramePaths,
     createPixelModel,
@@ -353,22 +354,11 @@
       autoTransitionLastStepTime = timestamp
 
       autoTransitionPaths.forEach(path => {
-        if (!path.slices.length) return
-
-        let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
-
-        deactivatePixelIndexes({
-          indexes: path.activeIndexes,
-          isTransitionMode: true,
+        advanceAutoTransitionPath({
+          path,
           now: timestamp,
-          states: pixelStates
-        })
-        path.activeSliceIndex = sliceIndex
-        path.activeIndexes = activatePixelIndexes({
-          indexes: path.slices[sliceIndex].indexes,
-          isTransitionMode: true,
-          now: timestamp,
-          states: pixelStates
+          states: pixelStates,
+          stepInterval: autoTransitionStepInterval
         })
       })
       scheduleRender()

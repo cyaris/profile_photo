@@ -209,6 +209,27 @@ export function createRevealFlags(pixelCount) {
   return new Uint8Array(pixelCount)
 }
 
+function arePixelIndexesIdle({ indexes, states }) {
+  return indexes.every(index => states[index].phase == pixelPhase.idle)
+}
+
+function getPixelIdleTime(state) {
+  if (state.phase == pixelPhase.idle) return 0
+
+  return state.deactivationStart
+    ? state.deactivationStart + transitionDeactivateDelay + transitionDuration * 2
+    : Infinity
+}
+
+function getNextCycleStart({ path, states, stepInterval }) {
+  return Math.max(
+    ...path.slices.map(
+      (slice, sliceIndex) =>
+        Math.max(...slice.indexes.map(index => getPixelIdleTime(states[index]))) - sliceIndex * stepInterval
+    )
+  )
+}
+
 export function createTransitionNeighborhoods({ cellPixelIndexes, columnCount, rowCount, radius }) {
   let roundedRadius = Math.max(Math.floor(radius), 0)
 
@@ -284,6 +305,33 @@ export function deactivatePixelIndexes({ indexes, isTransitionMode, now, states 
 
     state.deactivationStart = now
   })
+}
+
+export function advanceAutoTransitionPath({ path, now, states, stepInterval = transitionDuration / 32 }) {
+  if (!path.slices.length) return false
+
+  let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
+  let sliceIndexes = path.slices[sliceIndex].indexes
+
+  deactivatePixelIndexes({ indexes: path.activeIndexes, isTransitionMode: true, now, states })
+  path.activeIndexes = []
+
+  if (sliceIndex == 0 && path.activeSliceIndex !== undefined && path.nextCycleStart === undefined) {
+    path.nextCycleStart = getNextCycleStart({ path, states, stepInterval })
+  }
+
+  if (path.nextCycleStart !== undefined) {
+    if (now < path.nextCycleStart) return false
+
+    path.nextCycleStart = undefined
+  }
+
+  if (!arePixelIndexesIdle({ indexes: sliceIndexes, states })) return false
+
+  path.activeSliceIndex = sliceIndex
+  path.activeIndexes = activatePixelIndexes({ indexes: sliceIndexes, isTransitionMode: true, now, states })
+
+  return true
 }
 
 export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
