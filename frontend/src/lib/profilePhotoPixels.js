@@ -36,24 +36,29 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
 }
 
 function getPixelDisplay(pixel, geometry) {
-  let x = pixel.x * geometry.cellWidth
-  let y = pixel.y * geometry.cellHeight
-
   return {
-    x,
-    y,
+    x: pixel.x * geometry.cellWidth,
+    y: pixel.y * geometry.cellHeight,
     width: geometry.cellWidth,
     height: geometry.cellHeight,
     rotation: 0,
+    translateX: 0,
+    translateY: 0,
     opacity: 1,
-    strokeWidth: initialStrokeWidth,
-    anchorX: x,
-    anchorY: y
+    strokeWidth: initialStrokeWidth
   }
+}
+
+function getRotationTranslation(anchorX, anchorY, angle) {
+  let cos = Math.cos(angle)
+  let sin = Math.sin(angle)
+
+  return { x: anchorX * (1 - cos) + anchorY * sin, y: anchorY * (1 - cos) - anchorX * sin }
 }
 
 function getActivatedPixelDisplay(pixel, geometry) {
   let normal = getPixelDisplay(pixel, geometry)
+  let rotationTranslation = getRotationTranslation(normal.x, normal.y, finalRotation)
 
   return {
     ...normal,
@@ -62,6 +67,8 @@ function getActivatedPixelDisplay(pixel, geometry) {
     width: geometry.cellWidth / 1.5,
     height: geometry.cellHeight / 1.5,
     rotation: finalRotation,
+    translateX: rotationTranslation.x,
+    translateY: rotationTranslation.y,
     opacity: 0,
     strokeWidth: finalStrokeWidth
   }
@@ -85,10 +92,10 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
     width: normal.width + (activated.width - normal.width) * moveProgress,
     height: normal.height + (activated.height - normal.height) * moveProgress,
     rotation: finalRotation * moveProgress,
+    translateX: activated.translateX * moveProgress,
+    translateY: activated.translateY * moveProgress,
     opacity: 1 - fadeProgress,
-    strokeWidth: finalStrokeWidth,
-    anchorX: normal.anchorX,
-    anchorY: normal.anchorY
+    strokeWidth: finalStrokeWidth
   }
 }
 
@@ -110,10 +117,10 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
     width: normal.width + (activated.width - normal.width) * moveProgress,
     height: normal.height + (activated.height - normal.height) * moveProgress,
     rotation: finalRotation * moveProgress,
+    translateX: activated.translateX * moveProgress,
+    translateY: activated.translateY * moveProgress,
     opacity,
-    strokeWidth: finalStrokeWidth + (initialStrokeWidth - finalStrokeWidth) * strokeProgress,
-    anchorX: normal.anchorX,
-    anchorY: normal.anchorY
+    strokeWidth: finalStrokeWidth + (initialStrokeWidth - finalStrokeWidth) * strokeProgress
   }
 }
 
@@ -142,20 +149,10 @@ function drawPixel(context, pixel, renderState) {
   context.globalAlpha = renderState.opacity
   context.fillStyle = pixel.rgb
   context.lineWidth = renderState.strokeWidth
-  context.translate(renderState.anchorX, renderState.anchorY)
+  context.translate(renderState.translateX, renderState.translateY)
   context.rotate(renderState.rotation)
-  context.fillRect(
-    renderState.x - renderState.anchorX,
-    renderState.y - renderState.anchorY,
-    renderState.width,
-    renderState.height
-  )
-  context.strokeRect(
-    renderState.x - renderState.anchorX,
-    renderState.y - renderState.anchorY,
-    renderState.width,
-    renderState.height
-  )
+  context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
+  context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
   context.restore()
 }
 
