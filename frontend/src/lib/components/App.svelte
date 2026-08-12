@@ -5,8 +5,7 @@
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
-  import { Loading, ProgressBar, Select } from "svelte-lib/components"
-  import { getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
 
   import {
     activatePixelIndexes,
@@ -18,6 +17,7 @@
     createTransitionNeighborhoods,
     deactivatePixelIndexes,
     drawPixelCanvas,
+    getGridLinePixelIndexes,
     getPixelIndexFromPoint,
     getPixelNeighborhood,
     transitionDuration
@@ -37,12 +37,11 @@
   } = createPixelModel(pixels)
   const modeItems = [
     { value: "reveal", label: "Reveal" },
-    { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
     { value: "transition", label: "Transition" },
     { value: "auto_transition_frames", label: "Auto Transition (Frames)" },
     { value: "auto_transition_diagonal", label: "Auto Transition (Diagonal)" }
   ]
-  const progressBarColorScale = () => "#006D2C"
+  const progressBarColorScale = () => "#1b998b"
   const fireworkRevealTrigger = 0.9
   // favicon.png's actual pixel dimensions, not the pixelation grid's column/row count.
   const profilePhotoNaturalSize = 400
@@ -61,9 +60,11 @@
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
   let modeSelectValue = modeItems[sliderValue]
   let laserEyesTimer
+  let laserVisionEnabled = false
   let activePointerId
   let activePointerPixelIndex
   let activePointerTarget
+  let activePointerNeighborhoodIndexes = new Set()
   let autoTransitionFrame
   let autoTransitionPaths = []
   let autoTransitionLastStepTime
@@ -97,9 +98,13 @@
           width: displayWidth,
           height: displayHeight,
           cellWidth: displayWidth / pixelColumnCount,
-          cellHeight: displayHeight / pixelRowCount
+          cellHeight: displayHeight / pixelRowCount,
+          overflow: Math.max(displayWidth, displayHeight) / 8
         }
       : undefined
+  $: canvasOverflow = geometry?.overflow ?? 0
+  $: canvasWidth = geometry ? geometry.width + canvasOverflow * 2 : undefined
+  $: canvasHeight = geometry ? geometry.height + canvasOverflow * 2 : undefined
   $: geometryKey = geometry ? [geometry.width, geometry.height, pixelColumnCount, pixelRowCount].join(":") : undefined
   $: autoTransitionConfigKey = [
     activeMode,
@@ -143,6 +148,8 @@
   }
 
   function getPixelNeighborhoodIndexes(pixelIndex) {
+    if (pixelIndex === undefined) return []
+
     return getPixelNeighborhood({
       columnCount: pixelColumnCount,
       neighborhoods: transitionNeighborhoods,
@@ -150,53 +157,60 @@
     })
   }
 
-  function activatePixelIndex(pixelIndex) {
-    if (pixelIndex === undefined) return []
-
-    let activatedIndexes = activatePixelIndexes({
-      indexes: getPixelNeighborhoodIndexes(pixelIndex),
-      isTransitionMode,
-      now: performance.now(),
-      onRevealPixel: revealPixel,
-      states: pixelStates
-    })
-
-    if (activatedIndexes.length) {
-      scheduleRender()
-    }
-
-    return activatedIndexes
-  }
-
-  function deactivatePixelIndex(pixelIndex) {
-    if (pixelIndex === undefined) return
-
-    deactivatePixelIndexes({
-      indexes: getPixelNeighborhoodIndexes(pixelIndex),
-      isTransitionMode,
-      now: performance.now(),
-      states: pixelStates
-    })
-    scheduleRender()
-  }
-
   function getPointerPixelIndex(event) {
+    let bounds = pixelCanvas?.getBoundingClientRect()
+
     return getPixelIndexFromPoint({
       cellPixelIndexes,
       columnCount: pixelColumnCount,
-      point: getCanvasPointerPoint(pixelCanvas, event),
+      point: bounds
+        ? {
+            x: event.clientX - bounds.left - canvasOverflow,
+            y: event.clientY - bounds.top - canvasOverflow,
+            width: displayWidth,
+            height: displayHeight
+          }
+        : undefined,
       rowCount: pixelRowCount
+    })
+  }
+
+  function getPointerPathIndexes(pixelIndex) {
+    if (pixelIndex === undefined) return []
+
+    return getGridLinePixelIndexes({
+      cellPixelIndexes,
+      columnCount: pixelColumnCount,
+      fromPixel: pixelRecords[activePointerPixelIndex],
+      rowCount: pixelRowCount,
+      toPixel: pixelRecords[pixelIndex]
     })
   }
 
   function updateActivePointerPixel(event) {
     let pixelIndex = getPointerPixelIndex(event)
 
-    if (pixelIndex !== activePointerPixelIndex) {
-      deactivatePixelIndex(activePointerPixelIndex)
-      activePointerPixelIndex = pixelIndex
-      activatePixelIndex(activePointerPixelIndex)
-    }
+    if (pixelIndex === activePointerPixelIndex) return
+
+    let nextIndexSet = new Set(getPointerPathIndexes(pixelIndex).flatMap(getPixelNeighborhoodIndexes))
+
+    deactivatePixelIndexes({
+      indexes: [...activePointerNeighborhoodIndexes].filter(index => !nextIndexSet.has(index)),
+      isTransitionMode,
+      now: performance.now(),
+      states: pixelStates
+    })
+    activatePixelIndexes({
+      indexes: [...nextIndexSet].filter(index => !activePointerNeighborhoodIndexes.has(index)),
+      isTransitionMode,
+      now: performance.now(),
+      onRevealPixel: revealPixel,
+      states: pixelStates
+    })
+
+    activePointerNeighborhoodIndexes = nextIndexSet
+    activePointerPixelIndex = pixelIndex
+    scheduleRender()
   }
 
   function isPrimaryTouchPointer(event) {
@@ -228,7 +242,13 @@
   }
 
   function releaseActivePointer() {
-    deactivatePixelIndex(activePointerPixelIndex)
+    deactivatePixelIndexes({
+      indexes: [...activePointerNeighborhoodIndexes],
+      isTransitionMode,
+      now: performance.now(),
+      states: pixelStates
+    })
+    scheduleRender()
 
     if (activePointerId !== undefined && activePointerTarget?.hasPointerCapture?.(activePointerId)) {
       activePointerTarget.releasePointerCapture(activePointerId)
@@ -236,6 +256,7 @@
 
     activePointerId = undefined
     activePointerPixelIndex = undefined
+    activePointerNeighborhoodIndexes = new Set()
     activePointerTarget = undefined
   }
 
@@ -293,6 +314,19 @@
     if (laserEyesTimer) {
       laserEyesTimer.stop()
       laserEyesTimer = undefined
+    }
+
+    select(laserEyeCanvas).selectAll("circle").interrupt().remove()
+  }
+
+  function handleLaserVisionChange({ detail }) {
+    laserVisionEnabled = detail.checked
+
+    if (laserVisionEnabled) {
+      executeLaserEyes()
+      laserEyesTimer = interval(executeLaserEyes, 3000)
+    } else {
+      stopLaserEyes()
     }
   }
 
@@ -372,11 +406,6 @@
     releaseActivePointer()
     sliderValue = value
     resetPixels()
-    stopLaserEyes()
-
-    if (modeItems[value]?.value == "reveal_my_laser_vision") {
-      laserEyesTimer = interval(executeLaserEyes, 3000)
-    }
   }
 
   function handleModeValueChange({ detail: e }) {
@@ -427,7 +456,17 @@
 </script>
 
 <div class="mb-8 flex flex-col items-center">
-  <div class="relative w-fit max-w-md" bind:clientWidth={displayWidth} bind:clientHeight={displayHeight}>
+  <div
+    class="relative w-fit max-w-md"
+    style:touch-action="none"
+    bind:clientWidth={displayWidth}
+    bind:clientHeight={displayHeight}
+    on:pointerdown={handlePixelPointerDown}
+    on:pointermove={handlePixelPointerMove}
+    on:pointerup={handlePixelPointerUp}
+    on:pointercancel={handlePixelPointerCancel}
+    on:pointerleave={handlePixelPointerLeave}
+  >
     <img
       class="block h-auto max-w-full"
       src={profilePhotoSrc}
@@ -441,46 +480,50 @@
     </svg>
     <canvas
       bind:this={pixelCanvas}
-      class="absolute left-0 top-0 h-full w-full"
-      class:non-reactive={isAutoTransition}
-      style="touch-action: none;"
+      class="non-reactive absolute"
+      style:left="{-canvasOverflow}px"
+      style:top="{-canvasOverflow}px"
+      style:width="{canvasWidth}px"
+      style:height="{canvasHeight}px"
+      style:z-index={60}
       aria-hidden="true"
-      on:pointerdown={handlePixelPointerDown}
-      on:pointermove={handlePixelPointerMove}
-      on:pointerup={handlePixelPointerUp}
-      on:pointercancel={handlePixelPointerCancel}
-      on:pointerleave={handlePixelPointerLeave}
     ></canvas>
   </div>
   {#if isProfileReady}
-    {#if showModeSelection}
-      <div class="mt-2 flex flex-col items-center">
-        <Select
-          wrapperClasses="w-80 text-sm"
-          value={modeSelectValue}
-          items={modeItems}
-          clearable={false}
-          searchable={false}
-          centeredValue={true}
-          centeredItems={true}
-          on:valueChange={handleModeValueChange}
-        />
-      </div>
-    {/if}
-    {#if !isAutoTransition}
-      <div class="mt-4 flex flex-col items-center">
-        <div class="text-xl">Hover on my face!</div>
-        {#if !isTransitionMode}
-          <div class="w-64">
-            <ProgressBar
-              value={revealedPixelRatio * 100}
-              addPercentSign={true}
-              label="Pixels Revealed"
-              decimalPlaces={1}
-              definition="Can you reveal 90%?"
-              {progressBarColorScale}
-            />
-          </div>
+    {#if showModeSelection || !isAutoTransition}
+      <div class="mt-4 flex flex-col items-center gap-2">
+        {#if showModeSelection}
+          <Select
+            wrapperClasses="w-80 [&_[slot]]:text-base"
+            value={modeSelectValue}
+            items={modeItems}
+            clearable={false}
+            searchable={false}
+            centeredValue={true}
+            centeredItems={true}
+            on:valueChange={handleModeValueChange}
+          />
+          <Toggle
+            checked={laserVisionEnabled}
+            label="Laser vision"
+            wrapperClasses={isTransitionMode ? "w-80" : "w-56"}
+            labelClasses="text-base"
+            on:change={handleLaserVisionChange}
+          />
+        {/if}
+        {#if !isAutoTransition}
+          {#if !isTransitionMode}
+            <div class="w-64">
+              <ProgressBar
+                value={revealedPixelRatio * 100}
+                addPercentSign={true}
+                label="Pixels Revealed"
+                decimalPlaces={1}
+                definition="Can you reveal 90%?"
+                {progressBarColorScale}
+              />
+            </div>
+          {/if}
         {/if}
       </div>
     {/if}

@@ -1,3 +1,4 @@
+import { clamp, easeCubicInOut } from "svelte-lib/functions"
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
@@ -12,14 +13,6 @@ const transitionTotalDuration = transitionFadeDelay + transitionDuration
 const transitionDeactivateDelay = transitionDelay * 2 + transitionDuration * 2 + 300
 
 const pixelPhase = { idle: 0, activating: 1, hidden: 2, deactivating: 3 }
-
-function clamp(value, min = 0, max = 1) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function easeCubicInOut(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-}
 
 function getTransitionRegionWidth(radius) {
   return Math.max(Math.floor(radius), 0) * 2 + 1
@@ -108,8 +101,7 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
   let strokeProgress = easeCubicInOut(
     clamp((timestamp - state.deactivationStart - transitionDeactivateDelay - transitionDuration) / transitionDuration)
   )
-  let moveProgress = state.deactivationStartMoveProgress * (1 - reverseProgress)
-  let opacity = state.deactivationStartOpacity + (1 - state.deactivationStartOpacity) * reverseProgress
+  let moveProgress = 1 - reverseProgress
 
   return {
     x: normal.x + (activated.x - normal.x) * moveProgress,
@@ -119,7 +111,7 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
     rotation: finalRotation * moveProgress,
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
-    opacity,
+    opacity: reverseProgress,
     strokeWidth: finalStrokeWidth + (initialStrokeWidth - finalStrokeWidth) * strokeProgress
   }
 }
@@ -162,7 +154,17 @@ function compactFinishedStates(states, timestamp) {
   states.forEach(state => {
     if (state.phase == pixelPhase.activating && timestamp - state.activationStart >= transitionTotalDuration) {
       state.phase = pixelPhase.hidden
-    } else if (
+    }
+
+    if (
+      (state.phase == pixelPhase.activating || state.phase == pixelPhase.hidden) &&
+      state.deactivationStart &&
+      timestamp - state.deactivationStart >= transitionDeactivateDelay
+    ) {
+      state.phase = pixelPhase.deactivating
+    }
+
+    if (
       state.phase == pixelPhase.deactivating &&
       timestamp - state.deactivationStart >= transitionDeactivateDelay + transitionDuration * 2
     ) {
@@ -171,7 +173,7 @@ function compactFinishedStates(states, timestamp) {
       state.deactivationStart = 0
     }
 
-    if (state.phase == pixelPhase.activating || state.phase == pixelPhase.deactivating) {
+    if (state.phase == pixelPhase.activating || state.phase == pixelPhase.deactivating || state.deactivationStart) {
       hasAnimatingPixels = true
     }
   })
@@ -237,6 +239,20 @@ export function getPixelIndexFromPoint({ cellPixelIndexes, columnCount, point, r
   return pixelIndex >= 0 ? pixelIndex : undefined
 }
 
+export function getGridLinePixelIndexes({ cellPixelIndexes, columnCount, fromPixel, rowCount, toPixel }) {
+  if (!fromPixel) return [toPixel.index]
+
+  let steps = Math.max(Math.abs(toPixel.x - fromPixel.x), Math.abs(toPixel.y - fromPixel.y), 1)
+
+  return Array.from({ length: steps + 1 }, (_, step) => {
+    let t = step / steps
+    let x = Math.round(fromPixel.x + (toPixel.x - fromPixel.x) * t)
+    let y = Math.round(fromPixel.y + (toPixel.y - fromPixel.y) * t)
+
+    return getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y })
+  }).filter(index => index >= 0)
+}
+
 export function getPixelNeighborhood({ neighborhoods, pixel, columnCount }) {
   return neighborhoods[getCellIndex({ columnCount, x: pixel.x, y: pixel.y })] ?? []
 }
@@ -264,32 +280,27 @@ export function deactivatePixelIndexes({ indexes, isTransitionMode, now, states 
 
   indexes.forEach(index => {
     let state = states[index]
-    if (state.phase == pixelPhase.idle || state.phase == pixelPhase.deactivating) return
+    if (state.phase == pixelPhase.idle || state.phase == pixelPhase.deactivating || state.deactivationStart) return
 
-    if (state.phase == pixelPhase.hidden) {
-      state.deactivationStartMoveProgress = 1
-      state.deactivationStartOpacity = 0
-    } else {
-      let { moveProgress, fadeProgress } = getActivatingProgress(state, now)
-
-      state.deactivationStartMoveProgress = moveProgress
-      state.deactivationStartOpacity = 1 - fadeProgress
-    }
-
-    state.phase = pixelPhase.deactivating
     state.deactivationStart = now
   })
 }
 
 export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
-  let { context } = configureCanvas2D({ canvas, height: geometry.height, width: geometry.width })
+  let overflow = geometry.overflow ?? 0
+  let canvasHeight = geometry.height + overflow * 2
+  let canvasWidth = geometry.width + overflow * 2
+  let { context } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
-  context.clearRect(0, 0, geometry.width, geometry.height)
+  context.clearRect(0, 0, canvasWidth, canvasHeight)
+  context.save()
+  context.translate(overflow, overflow)
   context.strokeStyle = "white"
   pixels.forEach(pixel =>
     drawPixel(context, pixel, getPixelRenderState(pixel, states[pixel.index], geometry, timestamp))
   )
+  context.restore()
 
   return compactFinishedStates(states, timestamp)
 }
