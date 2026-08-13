@@ -5,16 +5,21 @@ const finalRotation = Math.PI / 4
 const finalStrokeWidth = 0.3
 const initialStrokeWidth = 0.075
 const timingTolerance = 0.001
+const transitionHiddenHoldDuration = 300
 
 export const transitionDelay = 100
 export const transitionDuration = 750
 
 const transitionFadeDelay = transitionDelay + transitionDuration + transitionDelay
 const transitionTotalDuration = transitionFadeDelay + transitionDuration
-const transitionDeactivateDelay = transitionDelay * 2 + transitionDuration * 2 + 300
+const transitionDeactivateDelay = transitionTotalDuration + transitionHiddenHoldDuration
 export const transitionReuseDuration = transitionDeactivateDelay + transitionDuration * 2
 
 const pixelPhase = { idle: 0, activating: 1, hidden: 2, deactivating: 3 }
+
+export function getAutoTransitionPixelHiddenDuration(stepInterval) {
+  return transitionHiddenHoldDuration + stepInterval
+}
 
 function getTransitionRegionWidth(radius) {
   return Math.max(Math.floor(radius), 0) * 2 + 1

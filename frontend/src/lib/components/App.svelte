@@ -18,6 +18,7 @@
     createTransitionNeighborhoods,
     deactivatePixelIndexes,
     drawPixelCanvas,
+    getAutoTransitionPixelHiddenDuration,
     getGridLinePixelIndexes,
     getPixelIndexFromPoint,
     getPixelNeighborhood,
@@ -58,10 +59,6 @@
     frames: (autoTransitionSetStepCount.frames - 1) * defaultAutoTransitionStepDuration,
     diagonal: (autoTransitionSetStepCount.diagonal - 1) * defaultAutoTransitionStepDuration
   }
-  const defaultAutoTransitionSetDelay = {
-    frames: 0,
-    diagonal: transitionReuseDuration - (autoTransitionSetStepCount.diagonal - 2) * defaultAutoTransitionStepDuration
-  }
   const modeItems = [
     { value: "reveal", label: "Reveal" },
     { value: "transition", label: "Transition" },
@@ -75,6 +72,16 @@
 
   function getModeValue(mode) {
     return modeItems.findIndex(item => item.value == mode)
+  }
+
+  function getDefaultAutoTransitionSetDelay(modeKey, stepInterval) {
+    if (modeKey == "frames") return 0
+
+    return (
+      transitionReuseDuration -
+      (autoTransitionSetStepCount.diagonal - 2) * stepInterval +
+      getAutoTransitionPixelHiddenDuration(stepInterval)
+    )
   }
 
   let displayWidth
@@ -101,7 +108,7 @@
   let isDestroyed = false
 
   export let autoTransitionSetDuration = defaultAutoTransitionSetDuration
-  export let autoTransitionSetDelay = defaultAutoTransitionSetDelay
+  export let autoTransitionSetDelay = undefined
 
   $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
   $: activeMode = modeItems[sliderValue]?.value ?? modeItems[0].value
@@ -117,13 +124,13 @@
   $: resolvedAutoTransitionSetDuration = Number.isFinite(configuredAutoTransitionSetDuration)
     ? Math.max(configuredAutoTransitionSetDuration, 1)
     : defaultAutoTransitionSetDuration[autoTransitionModeKey]
-  $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
-    ? Math.max(configuredAutoTransitionSetDelay, 0)
-    : defaultAutoTransitionSetDelay[autoTransitionModeKey]
   $: autoTransitionStepInterval = Math.max(
     resolvedAutoTransitionSetDuration / Math.max(autoTransitionSetStepCount[autoTransitionModeKey] - 1, 1),
     1
   )
+  $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
+    ? Math.max(configuredAutoTransitionSetDelay, 0)
+    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionStepInterval)
   $: transitionNeighborhoods = createTransitionNeighborhoods({
     cellPixelIndexes,
     columnCount: pixelColumnCount,

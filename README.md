@@ -58,12 +58,14 @@ Pass either complete or partial mode values; an omitted mode retains its built-i
 ```svelte
 <ProfilePhoto
   autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
-  autoTransitionSetDelay={{ frames: 0, diagonal: 400 }}
+  autoTransitionSetDelay={{ frames: 0, diagonal: 733.333 }}
 />
 ```
 
 The built-in values derive from the current pixel grid and preserve the original cadence of approximately 30 pixel
-slices per second. The example above shows the approximate defaults for the committed 48 by 48 grid.
+slices per second. In Diagonal mode, the default delay gives a fully restored pixel the same rest interval that it had
+while fully hidden; it does not change the speed at which a pixel moves or fades into or out of its hidden state. The
+example above shows the approximate defaults for the committed 48 by 48 grid.
 
 ## Pixel data generation
 
