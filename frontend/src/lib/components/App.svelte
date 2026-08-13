@@ -330,7 +330,7 @@
     }
   }
 
-  let executeLaserEye = function (i, cxInput, cyInput) {
+  let executeLaserEye = function (i, cxInput, cyInput, radiusBasis) {
     let circles = select(laserEyeCanvas)
       .append("circle")
       .attr("cx", cxInput)
@@ -344,7 +344,7 @@
       .transition()
       .delay(i * 225 + 500)
       .duration(3000)
-      .attr("r", 300)
+      .attr("r", radiusBasis * 0.75)
       .style("stroke-width", 0)
       .style("stroke-opacity", 0)
       .on("end", () => circles.remove())
@@ -354,8 +354,8 @@
     if (!displayWidth || !displayHeight || !laserEyeCanvas) return
 
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
-      executeLaserEye(i, displayWidth * 0.44, displayHeight * 0.5)
-      executeLaserEye(i, displayWidth * 0.6125, displayHeight * 0.49)
+      executeLaserEye(i, displayWidth * 0.44, displayHeight * 0.5, displayWidth)
+      executeLaserEye(i, displayWidth * 0.6125, displayHeight * 0.49, displayWidth)
     })
   }
 
@@ -525,7 +525,7 @@
       height={profilePhotoNaturalSize}
       on:load={scheduleRender}
     />
-    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
+    <svg class="pointer-events-none absolute left-0 top-0 overflow-hidden" width={displayWidth} height={displayHeight}>
       <g bind:this={laserEyeCanvas}></g>
     </svg>
     <canvas
