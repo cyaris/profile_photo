@@ -4,6 +4,7 @@ import { configureCanvas2D } from "svelte-lib/functions/canvas"
 const finalRotation = Math.PI / 4
 const finalStrokeWidth = 0.3
 const initialStrokeWidth = 0.075
+const timingTolerance = 0.001
 
 export const transitionDelay = 100
 export const transitionDuration = 750
@@ -11,6 +12,7 @@ export const transitionDuration = 750
 const transitionFadeDelay = transitionDelay + transitionDuration + transitionDelay
 const transitionTotalDuration = transitionFadeDelay + transitionDuration
 const transitionDeactivateDelay = transitionDelay * 2 + transitionDuration * 2 + 300
+export const transitionReuseDuration = transitionDeactivateDelay + transitionDuration * 2
 
 const pixelPhase = { idle: 0, activating: 1, hidden: 2, deactivating: 3 }
 
@@ -221,13 +223,16 @@ function getPixelIdleTime(state) {
     : Infinity
 }
 
-function getNextCycleStart({ path, states, stepInterval }) {
-  return Math.max(
-    ...path.slices.map(
-      (slice, sliceIndex) =>
-        Math.max(...slice.indexes.map(index => getPixelIdleTime(states[index]))) - sliceIndex * stepInterval
-    )
-  )
+function releaseReusablePixelIndexes({ indexes, now, states }) {
+  indexes.forEach(index => {
+    let state = states[index]
+
+    if (getPixelIdleTime(state) <= now + timingTolerance) {
+      state.phase = pixelPhase.idle
+      state.activationStart = 0
+      state.deactivationStart = 0
+    }
+  })
 }
 
 export function createTransitionNeighborhoods({ cellPixelIndexes, columnCount, rowCount, radius }) {
@@ -307,7 +312,7 @@ export function deactivatePixelIndexes({ indexes, isTransitionMode, now, states 
   })
 }
 
-export function advanceAutoTransitionPath({ path, now, states, stepInterval = transitionDuration / 32 }) {
+export function advanceAutoTransitionPath({ path, now, setDelay = transitionDuration / 32, states }) {
   if (!path.slices.length) return false
 
   let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
@@ -317,19 +322,24 @@ export function advanceAutoTransitionPath({ path, now, states, stepInterval = tr
   path.activeIndexes = []
 
   if (sliceIndex == 0 && path.activeSliceIndex !== undefined && path.nextCycleStart === undefined) {
-    path.nextCycleStart = getNextCycleStart({ path, states, stepInterval })
+    path.nextCycleStart = path.setCompletedAt + setDelay
   }
 
-  if (path.nextCycleStart !== undefined) {
-    if (now < path.nextCycleStart) return false
+  if (sliceIndex == 0 && path.nextCycleStart !== undefined) {
+    if (now < path.nextCycleStart - timingTolerance) return false
 
     path.nextCycleStart = undefined
   }
 
+  releaseReusablePixelIndexes({ indexes: sliceIndexes, now, states })
   if (!arePixelIndexesIdle({ indexes: sliceIndexes, states })) return false
 
   path.activeSliceIndex = sliceIndex
   path.activeIndexes = activatePixelIndexes({ indexes: sliceIndexes, isTransitionMode: true, now, states })
+
+  if (sliceIndex == path.slices.length - 1) {
+    path.setCompletedAt = now
+  }
 
   return true
 }

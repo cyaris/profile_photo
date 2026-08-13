@@ -44,6 +44,27 @@ npm run lint
 npm run format:check
 ```
 
+## Auto Transition timing
+
+`ProfilePhoto` accepts two timing props, expressed in milliseconds and keyed by Auto Transition mode:
+
+|Prop|Behavior|
+|---|---|
+|`autoTransitionSetDuration`|Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo.|
+|`autoTransitionSetDelay`|Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning.|
+
+Pass either complete or partial mode values; an omitted mode retains its built-in timing:
+
+```svelte
+<ProfilePhoto
+  autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
+  autoTransitionSetDelay={{ frames: 0, diagonal: 400 }}
+/>
+```
+
+The built-in values derive from the current pixel grid and preserve the original cadence of approximately 30 pixel
+slices per second. The example above shows the approximate defaults for the committed 48 by 48 grid.
+
 ## Pixel data generation
 
 The backend utility reads `frontend/src/lib/static/favicon.png` and writes `frontend/src/lib/static/pixels.json`. The

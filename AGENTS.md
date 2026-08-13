@@ -8,6 +8,14 @@
   affect how someone uses, maintains, deploys, or releases the project. When a state change makes a requirement obsolete,
   update the affected docs and configuration in that same change.
 
+## Auto Transition Timing
+
+- Keep the full-set completion duration and the delay between sets independently configurable for both the Frames and
+  Diagonal Auto Transition modes. A Frames set completes one full perimeter, while a Diagonal set completes the full
+  photo; do not replace either timing control with a hard-coded or transition-lifecycle-derived cadence. Keep the
+  effective gap constant across completed sets. Treat the configured delay as a minimum and resolve a constant safety
+  floor when necessary so a new set never reaches pixels that are still transitioning.
+
 ## GitHub Actions
 
 - Use `../shared-automation/AGENTS.md` as the source of truth for shared GitHub Actions, reusable workflow wrapper,

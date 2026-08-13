@@ -21,7 +21,7 @@
     getGridLinePixelIndexes,
     getPixelIndexFromPoint,
     getPixelNeighborhood,
-    transitionDuration
+    transitionReuseDuration
   } from "../profilePhotoPixels.js"
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
@@ -36,6 +36,32 @@
     pixelRecords,
     rowCount: pixelRowCount
   } = createPixelModel(pixels)
+  const defaultAutoTransitionStepDuration = 1000 / 30
+  const autoTransitionSetStepCount = {
+    frames: Math.max(
+      ...createAutoTransitionFramePaths({
+        cellPixelIndexes,
+        columnCount: pixelColumnCount,
+        cornerIndex: 0,
+        radius: transitionPixelRadius,
+        rowCount: pixelRowCount
+      }).map(path => path.slices.length)
+    ),
+    diagonal: createAutoTransitionDiagonalPaths({
+      columnCount: pixelColumnCount,
+      cornerIndex: 0,
+      pixels: pixelRecords,
+      rowCount: pixelRowCount
+    })[0].slices.length
+  }
+  const defaultAutoTransitionSetDuration = {
+    frames: (autoTransitionSetStepCount.frames - 1) * defaultAutoTransitionStepDuration,
+    diagonal: (autoTransitionSetStepCount.diagonal - 1) * defaultAutoTransitionStepDuration
+  }
+  const defaultAutoTransitionSetDelay = {
+    frames: 0,
+    diagonal: transitionReuseDuration - (autoTransitionSetStepCount.diagonal - 2) * defaultAutoTransitionStepDuration
+  }
   const modeItems = [
     { value: "reveal", label: "Reveal" },
     { value: "transition", label: "Transition" },
@@ -68,13 +94,14 @@
   let activePointerNeighborhoodIndexes = new Set()
   let autoTransitionFrame
   let autoTransitionPaths = []
-  let autoTransitionLastStepTime
+  let autoTransitionNextStepTime
   let autoTransitionKey
   let prefersReducedMotion = false
   let renderFrame
   let isDestroyed = false
 
-  export let autoTransitionStepDuration = transitionDuration / 32
+  export let autoTransitionSetDuration = defaultAutoTransitionSetDuration
+  export let autoTransitionSetDelay = defaultAutoTransitionSetDelay
 
   $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
   $: activeMode = modeItems[sliderValue]?.value ?? modeItems[0].value
@@ -84,9 +111,19 @@
   $: isAutoTransitionDiagonal = activeMode == "auto_transition_diagonal"
   $: isAutoTransition = isAutoTransitionFrames || isAutoTransitionDiagonal
   $: isTransitionMode = activeMode == "transition" || isAutoTransition
-  $: autoTransitionStepInterval = Number.isFinite(autoTransitionStepDuration)
-    ? Math.max(autoTransitionStepDuration, 1)
-    : transitionDuration / 32
+  $: autoTransitionModeKey = isAutoTransitionDiagonal ? "diagonal" : "frames"
+  $: configuredAutoTransitionSetDuration = autoTransitionSetDuration?.[autoTransitionModeKey]
+  $: configuredAutoTransitionSetDelay = autoTransitionSetDelay?.[autoTransitionModeKey]
+  $: resolvedAutoTransitionSetDuration = Number.isFinite(configuredAutoTransitionSetDuration)
+    ? Math.max(configuredAutoTransitionSetDuration, 1)
+    : defaultAutoTransitionSetDuration[autoTransitionModeKey]
+  $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
+    ? Math.max(configuredAutoTransitionSetDelay, 0)
+    : defaultAutoTransitionSetDelay[autoTransitionModeKey]
+  $: autoTransitionStepInterval = Math.max(
+    resolvedAutoTransitionSetDuration / Math.max(autoTransitionSetStepCount[autoTransitionModeKey] - 1, 1),
+    1
+  )
   $: transitionNeighborhoods = createTransitionNeighborhoods({
     cellPixelIndexes,
     columnCount: pixelColumnCount,
@@ -111,6 +148,7 @@
     activeMode,
     transitionPixelRadius,
     autoTransitionStepInterval,
+    resolvedAutoTransitionSetDelay,
     pixelColumnCount,
     pixelRowCount
   ].join(":")
@@ -189,6 +227,8 @@
   }
 
   function updateActivePointerPixel(event) {
+    if (event.currentTarget.classList.contains("non-reactive")) return
+
     let pixelIndex = getPointerPixelIndex(event)
 
     if (pixelIndex === activePointerPixelIndex) return
@@ -338,7 +378,7 @@
     }
 
     autoTransitionPaths = []
-    autoTransitionLastStepTime = undefined
+    autoTransitionNextStepTime = undefined
     autoTransitionKey = undefined
 
     if (reset) {
@@ -349,16 +389,27 @@
   function advanceAutoTransition(timestamp) {
     if (
       autoTransitionPaths.length &&
-      (autoTransitionLastStepTime === undefined || timestamp - autoTransitionLastStepTime >= autoTransitionStepInterval)
+      (autoTransitionNextStepTime === undefined || timestamp >= autoTransitionNextStepTime)
     ) {
-      autoTransitionLastStepTime = timestamp
+      let currentStepTime = autoTransitionNextStepTime ?? timestamp
+
+      if (timestamp - currentStepTime >= autoTransitionStepInterval) {
+        currentStepTime = timestamp
+      }
+
+      autoTransitionNextStepTime = currentStepTime + autoTransitionStepInterval
 
       autoTransitionPaths.forEach(path => {
+        let minimumSetDelay = Math.max(
+          transitionReuseDuration - (path.slices.length - 2) * autoTransitionStepInterval,
+          0
+        )
+
         advanceAutoTransitionPath({
           path,
-          now: timestamp,
-          states: pixelStates,
-          stepInterval: autoTransitionStepInterval
+          now: currentStepTime,
+          setDelay: Math.max(resolvedAutoTransitionSetDelay, minimumSetDelay),
+          states: pixelStates
         })
       })
       scheduleRender()
@@ -448,6 +499,7 @@
 <div class="mb-8 flex flex-col items-center">
   <div
     class="relative w-fit max-w-md"
+    class:non-reactive={isAutoTransition}
     style:touch-action="none"
     bind:clientWidth={displayWidth}
     bind:clientHeight={displayHeight}
@@ -470,7 +522,7 @@
     </svg>
     <canvas
       bind:this={pixelCanvas}
-      class="non-reactive absolute"
+      class="pointer-events-none absolute"
       style:left="{-canvasOverflow}px"
       style:top="{-canvasOverflow}px"
       style:width="{canvasWidth}px"
@@ -484,7 +536,7 @@
       <div class="mt-4 flex flex-col items-center gap-2">
         {#if showModeSelection}
           <Select
-            wrapperClasses="w-80 [&_[slot]]:text-base"
+            wrapperClasses="w-64"
             value={modeSelectValue}
             items={modeItems}
             clearable={false}
@@ -496,8 +548,7 @@
           <Toggle
             checked={laserVisionEnabled}
             label="Laser vision"
-            wrapperClasses={isTransitionMode ? "w-80" : "w-56"}
-            labelClasses="text-base"
+            wrapperClasses="w-64"
             on:change={handleLaserVisionChange}
           />
         {/if}
