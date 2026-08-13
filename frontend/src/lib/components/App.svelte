@@ -38,7 +38,18 @@
     rowCount: pixelRowCount
   } = createPixelModel(pixels)
   const defaultAutoTransitionStepDuration = 1000 / 30
-  const autoTransitionSetStepCount = {
+  const modeItems = [
+    { value: "reveal", label: "Reveal" },
+    { value: "transition", label: "Transition" },
+    { value: "auto_transition_frames", label: "Auto Transition (Frames)" },
+    { value: "auto_transition_diagonal", label: "Auto Transition (Diagonal)" }
+  ]
+  const progressBarColorScale = () => "#1b998b"
+  const fireworkRevealTrigger = 0.9
+  // favicon.png's actual pixel dimensions, not the pixelation grid's column/row count.
+  const profilePhotoNaturalSize = 400
+
+  $: autoTransitionSetStepCount = {
     frames: Math.max(
       ...createAutoTransitionFramePaths({
         cellPixelIndexes,
@@ -55,32 +66,22 @@
       rowCount: pixelRowCount
     })[0].slices.length
   }
-  const defaultAutoTransitionSetDuration = {
+  $: defaultAutoTransitionSetDuration = {
     frames: (autoTransitionSetStepCount.frames - 1) * defaultAutoTransitionStepDuration,
     diagonal: (autoTransitionSetStepCount.diagonal - 1) * defaultAutoTransitionStepDuration
   }
-  const modeItems = [
-    { value: "reveal", label: "Reveal" },
-    { value: "transition", label: "Transition" },
-    { value: "auto_transition_frames", label: "Auto Transition (Frames)" },
-    { value: "auto_transition_diagonal", label: "Auto Transition (Diagonal)" }
-  ]
-  const progressBarColorScale = () => "#1b998b"
-  const fireworkRevealTrigger = 0.9
-  // favicon.png's actual pixel dimensions, not the pixelation grid's column/row count.
-  const profilePhotoNaturalSize = 400
 
   function getModeValue(mode) {
     return modeItems.findIndex(item => item.value == mode)
   }
 
-  function getDefaultAutoTransitionSetDelay(modeKey, stepInterval) {
-    if (modeKey == "frames") return 0
+  function getDefaultAutoTransitionSetDelay() {
+    if (autoTransitionModeKey == "frames") return 0
 
     return (
       transitionReuseDuration -
-      (autoTransitionSetStepCount.diagonal - 2) * stepInterval +
-      getAutoTransitionPixelHiddenDuration(stepInterval)
+      (autoTransitionSetStepCount.diagonal - 2) * autoTransitionStepInterval +
+      getAutoTransitionPixelHiddenDuration(autoTransitionStepInterval)
     )
   }
 
@@ -107,7 +108,7 @@
   let renderFrame
   let isDestroyed = false
 
-  export let autoTransitionSetDuration = defaultAutoTransitionSetDuration
+  export let autoTransitionSetDuration = undefined
   export let autoTransitionSetDelay = undefined
 
   $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
@@ -130,7 +131,7 @@
   )
   $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
     ? Math.max(configuredAutoTransitionSetDelay, 0)
-    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionStepInterval)
+    : getDefaultAutoTransitionSetDelay()
   $: transitionNeighborhoods = createTransitionNeighborhoods({
     cellPixelIndexes,
     columnCount: pixelColumnCount,
