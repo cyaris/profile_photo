@@ -581,7 +581,7 @@
   {/if}
 </div>
 {#if isProfileReady && !isTransitionMode}
-  <div class="non-reactive fixed left-0 top-0">
+  <div class="non-reactive pointer-events-none fixed left-0 top-0 z-[100]">
     {#key sliderValue}
       <FireworkShow fireworkShow={revealedPixelRatio >= fireworkRevealTrigger} />
     {/key}
