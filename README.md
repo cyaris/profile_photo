@@ -92,7 +92,7 @@ inputs, and secrets are documented in the
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `main`, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `dev` and `main` and on manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
 `frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `dev`
