@@ -127,7 +127,7 @@ those branches to exact commit SHAs before checkout and passes the same resolved
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 12:53 UTC, 23 minutes after `fireworks`'s own upstream watch and 37
+The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes after `fireworks`'s own upstream watch and 30
 minutes before the GitHub Pages build for `cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s and `fireworks`'s `main` branches and, when either has moved since the last check, dispatches
