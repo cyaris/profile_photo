@@ -16,7 +16,7 @@
   effective gap constant across completed sets. Treat the configured delay as a minimum and resolve a constant safety
   floor when necessary so a new set never reaches pixels that are still transitioning. For the built-in Diagonal delay,
   keep the fully visible rest interval after a pixel is restored equal to its fully hidden interval. Do not change the
-  pixel movement or fade durations to achieve that timing; those transition speeds should continue to match `main`.
+  pixel movement or fade durations to achieve that timing; treat those transition speeds as fixed.
 
 ## GitHub Actions
 

@@ -75,13 +75,13 @@
     return modeItems.findIndex(item => item.value == mode)
   }
 
-  function getDefaultAutoTransitionSetDelay() {
-    if (autoTransitionModeKey == "frames") return 0
+  function getDefaultAutoTransitionSetDelay(modeKey, stepCount, stepInterval) {
+    if (modeKey == "frames") return 0
 
     return (
       transitionReuseDuration -
-      (autoTransitionSetStepCount.diagonal - 2) * autoTransitionStepInterval +
-      getAutoTransitionPixelHiddenDuration(autoTransitionStepInterval)
+      (stepCount.diagonal - 2) * stepInterval +
+      getAutoTransitionPixelHiddenDuration(stepInterval)
     )
   }
 
@@ -131,7 +131,7 @@
   )
   $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
     ? Math.max(configuredAutoTransitionSetDelay, 0)
-    : getDefaultAutoTransitionSetDelay()
+    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionSetStepCount, autoTransitionStepInterval)
   $: transitionNeighborhoods = createTransitionNeighborhoods({
     cellPixelIndexes,
     columnCount: pixelColumnCount,
