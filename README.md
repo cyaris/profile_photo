@@ -44,6 +44,29 @@ npm run lint
 npm run format:check
 ```
 
+## Auto Transition timing
+
+`ProfilePhoto` accepts two timing props, expressed in milliseconds and keyed by Auto Transition mode:
+
+|Prop|Behavior|
+|---|---|
+|`autoTransitionSetDuration`|Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo.|
+|`autoTransitionSetDelay`|Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning.|
+
+Pass either complete or partial mode values; an omitted mode retains its built-in timing:
+
+```svelte
+<ProfilePhoto
+  autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
+  autoTransitionSetDelay={{ frames: 0, diagonal: 733.333 }}
+/>
+```
+
+The built-in values derive from the current pixel grid and preserve the original cadence of approximately 30 pixel
+slices per second. In Diagonal mode, the default delay gives a fully restored pixel the same rest interval that it had
+while fully hidden; it does not change the speed at which a pixel moves or fades into or out of its hidden state. The
+example above shows the approximate defaults for the committed 48 by 48 grid.
+
 ## Pixel data generation
 
 The backend utility reads `frontend/src/lib/static/favicon.png` and writes `frontend/src/lib/static/pixels.json`. The
@@ -79,6 +102,11 @@ The frontend uses local packages from this workspace:
 
 If either local package changes, rebuild that package before refreshing this app.
 
+## Credits
+
+The laser vision feature's animation builds on the concentric-circles technique from
+[mrtriangle's block](http://bl.ocks.org/mrtriangle/11222485).
+
 ## GitHub Actions Workflows
 
 These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
@@ -87,7 +115,7 @@ inputs, and secrets are documented in the
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `main`, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `dev` and `main` and on manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
 `frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `dev`
@@ -99,7 +127,8 @@ those branches to exact commit SHAs before checkout and passes the same resolved
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 13:18 UTC and on manual dispatch, then calls the
+The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes after `fireworks`'s own upstream watch and 30
+minutes before the GitHub Pages build for `cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s and `fireworks`'s `main` branches and, when either has moved since the last check, dispatches
 this repository's own `Rollup` workflow on `main` so the build picks up the new upstream commit without waiting for a

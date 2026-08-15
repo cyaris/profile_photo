@@ -5,8 +5,25 @@
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
-  import { Loading, ProgressBar, Select } from "svelte-lib/components"
+  import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
 
+  import {
+    activatePixelIndexes,
+    advanceAutoTransitionPath,
+    createAutoTransitionDiagonalPaths,
+    createAutoTransitionFramePaths,
+    createPixelModel,
+    createPixelStates,
+    createRevealFlags,
+    createTransitionNeighborhoods,
+    deactivatePixelIndexes,
+    drawPixelCanvas,
+    getAutoTransitionPixelHiddenDuration,
+    getGridLinePixelIndexes,
+    getPixelIndexFromPoint,
+    getPixelNeighborhood,
+    transitionReuseDuration
+  } from "../profilePhotoPixels.js"
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
 
@@ -14,69 +31,87 @@
   export let showModeSelection = true
   export let transitionPixelRadius = 2
 
-  const pixelColumnCount = Math.max(...pixels.map(v => v.x + 1))
-  const pixelRowCount = Math.max(...pixels.map(v => v.y + 1))
-  const pixelIds = new Set(pixels.map(v => v.id))
+  const {
+    cellPixelIndexes,
+    columnCount: pixelColumnCount,
+    pixelRecords,
+    rowCount: pixelRowCount
+  } = createPixelModel(pixels)
+  const defaultAutoTransitionStepDuration = 1000 / 30
   const modeItems = [
     { value: "reveal", label: "Reveal" },
-    { value: "reveal_my_laser_vision", label: "Reveal My Laser Vision" },
     { value: "transition", label: "Transition" },
     { value: "auto_transition_frames", label: "Auto Transition (Frames)" },
     { value: "auto_transition_diagonal", label: "Auto Transition (Diagonal)" }
   ]
+  const progressBarColorScale = () => "#1b998b"
+  const fireworkRevealTrigger = 0.9
+  // favicon.png's actual pixel dimensions, not the pixelation grid's column/row count.
+  const profilePhotoNaturalSize = 400
+
+  $: autoTransitionSetStepCount = {
+    frames: Math.max(
+      ...createAutoTransitionFramePaths({
+        cellPixelIndexes,
+        columnCount: pixelColumnCount,
+        cornerIndex: 0,
+        radius: transitionPixelRadius,
+        rowCount: pixelRowCount
+      }).map(path => path.slices.length)
+    ),
+    diagonal: createAutoTransitionDiagonalPaths({
+      columnCount: pixelColumnCount,
+      cornerIndex: 0,
+      pixels: pixelRecords,
+      rowCount: pixelRowCount
+    })[0].slices.length
+  }
+  $: defaultAutoTransitionSetDuration = {
+    frames: (autoTransitionSetStepCount.frames - 1) * defaultAutoTransitionStepDuration,
+    diagonal: (autoTransitionSetStepCount.diagonal - 1) * defaultAutoTransitionStepDuration
+  }
 
   function getModeValue(mode) {
     return modeItems.findIndex(item => item.value == mode)
   }
 
-  function getRelativeTransitionIds(radius) {
-    let roundedRadius = Math.max(Math.floor(radius), 0)
+  function getDefaultAutoTransitionSetDelay(modeKey, stepCount, stepInterval) {
+    if (modeKey == "frames") return 0
 
-    return Array.from({ length: roundedRadius * 2 + 1 }, (_, xIndex) =>
-      Array.from({ length: roundedRadius * 2 + 1 }, (_, yIndex) => ({
-        x: xIndex - roundedRadius,
-        y: yIndex - roundedRadius
-      }))
-    ).flat()
+    return (
+      transitionReuseDuration -
+      (stepCount.diagonal - 2) * stepInterval +
+      getAutoTransitionPixelHiddenDuration(stepInterval)
+    )
   }
 
-  function getTransitionRegionWidth(radius = transitionPixelRadius) {
-    return Math.max(Math.floor(radius), 0) * 2 + 1
-  }
-
-  let width
-  let height
-  let pixelWidth
-  let pixelHeight
-  let profilePhoto
+  let displayWidth
+  let displayHeight
   let pixelCanvas
   let laserEyeCanvas
-  // TODO: fix bug where img renders at 5px less than height variable.
-  let imgHeightDifference
-
-  let transitionDelay = 100
-  const transitionDuration = 750
-
-  export let autoTransitionStepDuration = transitionDuration / 32
-
-  let revealedPixelIds = new Set()
+  let pixelStates = createPixelStates(pixelRecords.length)
+  let revealedPixels = createRevealFlags(pixelRecords.length)
+  let revealedPixelCount = 0
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
   let modeSelectValue = modeItems[sliderValue]
   let laserEyesTimer
+  let laserVisionEnabled = false
   let activePointerId
-  let activePointerPixel
+  let activePointerPixelIndex
   let activePointerTarget
+  let activePointerNeighborhoodIndexes = new Set()
   let autoTransitionFrame
   let autoTransitionPaths = []
-  let autoTransitionLastStepTime
+  let autoTransitionNextStepTime
   let autoTransitionKey
   let prefersReducedMotion = false
+  let renderFrame
+  let isDestroyed = false
 
-  const progressBarColorScale = () => "#006D2C"
+  export let autoTransitionSetDuration = undefined
+  export let autoTransitionSetDelay = undefined
 
-  const fireworkRevealTrigger = 0.9
-
-  $: revealedPixelRatio = revealedPixelIds.size / pixels.length
+  $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
   $: activeMode = modeItems[sliderValue]?.value ?? modeItems[0].value
   $: modeSelectValue = modeItems[sliderValue] ?? modeItems[0]
   $: forcedModeValue = getModeValue(forcedMode)
@@ -84,164 +119,159 @@
   $: isAutoTransitionDiagonal = activeMode == "auto_transition_diagonal"
   $: isAutoTransition = isAutoTransitionFrames || isAutoTransitionDiagonal
   $: isTransitionMode = activeMode == "transition" || isAutoTransition
-  $: autoTransitionStepInterval = Number.isFinite(autoTransitionStepDuration)
-    ? Math.max(autoTransitionStepDuration, 1)
-    : transitionDuration / 32
+  $: autoTransitionModeKey = isAutoTransitionDiagonal ? "diagonal" : "frames"
+  $: configuredAutoTransitionSetDuration = autoTransitionSetDuration?.[autoTransitionModeKey]
+  $: configuredAutoTransitionSetDelay = autoTransitionSetDelay?.[autoTransitionModeKey]
+  $: resolvedAutoTransitionSetDuration = Number.isFinite(configuredAutoTransitionSetDuration)
+    ? Math.max(configuredAutoTransitionSetDuration, 1)
+    : defaultAutoTransitionSetDuration[autoTransitionModeKey]
+  $: autoTransitionStepInterval = Math.max(
+    resolvedAutoTransitionSetDuration / Math.max(autoTransitionSetStepCount[autoTransitionModeKey] - 1, 1),
+    1
+  )
+  $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
+    ? Math.max(configuredAutoTransitionSetDelay, 0)
+    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionSetStepCount, autoTransitionStepInterval)
+  $: transitionNeighborhoods = createTransitionNeighborhoods({
+    cellPixelIndexes,
+    columnCount: pixelColumnCount,
+    radius: transitionPixelRadius,
+    rowCount: pixelRowCount
+  })
+  $: geometry =
+    displayWidth && displayHeight
+      ? {
+          width: displayWidth,
+          height: displayHeight,
+          cellWidth: displayWidth / pixelColumnCount,
+          cellHeight: displayHeight / pixelRowCount,
+          overflow: Math.max(displayWidth, displayHeight) / 8
+        }
+      : undefined
+  $: canvasOverflow = geometry?.overflow ?? 0
+  $: canvasWidth = geometry ? geometry.width + canvasOverflow * 2 : undefined
+  $: canvasHeight = geometry ? geometry.height + canvasOverflow * 2 : undefined
+  $: geometryKey = geometry ? [geometry.width, geometry.height, pixelColumnCount, pixelRowCount].join(":") : undefined
   $: autoTransitionConfigKey = [
     activeMode,
     transitionPixelRadius,
     autoTransitionStepInterval,
+    resolvedAutoTransitionSetDelay,
     pixelColumnCount,
     pixelRowCount
   ].join(":")
+  $: isProfileReady = pixelCanvas && laserEyeCanvas && geometry
 
-  function getTransitionIds(id, radius = transitionPixelRadius) {
-    let x = parseInt(id.split("y")[0].substring(1))
-    let y = parseInt(id.split("y")[1])
-
-    return getRelativeTransitionIds(radius)
-      .map(v => "#x" + String(v.x + x) + "y" + String(v.y + y))
-      .filter(v => pixelIds.has(v.slice(1)))
-  }
-
-  function activateTransitionIds(transitionIds) {
-    let activatedTransitionIds = transitionIds.filter(v => !select(v).classed("non-reactive"))
-
-    if (activatedTransitionIds.length) {
-      if (!isTransitionMode) {
-        revealedPixelIds = new Set([...revealedPixelIds, ...activatedTransitionIds])
-      }
-      select(pixelCanvas)
-        .selectAll(activatedTransitionIds.join(", "))
-        .classed("non-reactive", true)
-        .style("stroke-width", 0.3)
-        .transition()
-        .delay(transitionDelay)
-        .duration(transitionDuration)
-        .attr("x", d => d.x * pixelWidth + pixelWidth / 2 - 1.5)
-        .attr("y", d => d.y * pixelHeight - pixelHeight / 2)
-        .attr("width", pixelWidth / 1.5)
-        .attr("height", pixelHeight / 1.5)
-        .attr("transform", d => "rotate(45," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
-        .transition()
-        .delay(transitionDelay)
-        .duration(transitionDuration)
-        .style("opacity", 0)
+  function scheduleRender() {
+    if (!isDestroyed && !renderFrame) {
+      renderFrame = requestAnimationFrame(renderPixels)
     }
-
-    return activatedTransitionIds
   }
 
-  function activatePixel(pixelElement, radius = transitionPixelRadius) {
-    if (select(pixelElement).classed("non-reactive")) {
+  function renderPixels(timestamp) {
+    renderFrame = undefined
+
+    if (!pixelCanvas || !geometry) {
       return
     }
 
-    activateTransitionIds(getTransitionIds(select(pixelElement).attr("id"), radius))
-  }
-
-  let pixelMouseOver = function () {
-    activatePixel(this)
-  }
-
-  function deactivateTransitionIds(transitionIds) {
-    // mouseleave function is only needed for transition mode because otherwise the pixel will be removed.
-    if (isTransitionMode) {
-      if (transitionIds.length) {
-        let rects = select(pixelCanvas).selectAll(transitionIds.join(", "))
-
-        rects
-          .transition()
-          .delay(transitionDelay * 2 + transitionDuration * 2 + 300)
-          .duration(transitionDuration)
-          .attr("x", d => d.x * pixelWidth)
-          .attr("y", d => d.y * pixelHeight)
-          .attr("width", pixelWidth)
-          .attr("height", pixelHeight)
-          .attr("transform", d => "rotate(0," + d.x * pixelWidth + "," + d.y * pixelHeight + ")")
-          .style("opacity", 1)
-          .transition()
-          // .delay(transitionDelay)
-          .duration(transitionDuration)
-          .style("stroke-width", 0.075)
-          .on("end", () => rects.classed("non-reactive", false))
-      }
+    if (drawPixelCanvas({ canvas: pixelCanvas, geometry, pixels: pixelRecords, states: pixelStates, timestamp })) {
+      scheduleRender()
     }
   }
 
-  function deactivatePixel(pixelElement, radius = transitionPixelRadius) {
-    deactivateTransitionIds(getTransitionIds(select(pixelElement).attr("id"), radius))
+  function revealPixel(index) {
+    if (revealedPixels[index]) return
+
+    revealedPixels[index] = 1
+    revealedPixelCount += 1
   }
 
-  let pixelMouseLeave = function () {
-    deactivatePixel(this)
+  function resetPixels() {
+    pixelStates = createPixelStates(pixelRecords.length)
+    revealedPixels = createRevealFlags(pixelRecords.length)
+    revealedPixelCount = 0
+    scheduleRender()
   }
 
-  function appendPixels() {
-    select(pixelCanvas)
-      .selectAll("rect.pixels")
-      .data(pixels, d => d.id)
-      .join(enter =>
-        enter
-          .append("rect")
-          .attr("class", "pixels")
-          .attr("id", d => d.id)
-          .style("stroke", "white")
-          .style("fill", d => d.rgb)
-          .on("mouseover", pixelMouseOver)
-          .on("mouseleave", pixelMouseLeave)
-      )
-      .interrupt()
-      .classed("non-reactive", false)
-      .attr("id", d => d.id)
-      .attr("x", d => d.x * pixelWidth)
-      .attr("y", d => d.y * pixelHeight)
-      .attr("width", pixelWidth)
-      .attr("height", pixelHeight)
-      .attr("transform", null)
-      .style("opacity", 1)
-      .style("stroke-width", 0.075)
+  function getPixelNeighborhoodIndexes(pixelIndex) {
+    if (pixelIndex === undefined) return []
+
+    return getPixelNeighborhood({
+      columnCount: pixelColumnCount,
+      neighborhoods: transitionNeighborhoods,
+      pixel: pixelRecords[pixelIndex]
+    })
   }
 
-  function getPixelFromPoint(event) {
-    if (!pixelCanvas || !pixelWidth || !pixelHeight) {
-      return undefined
-    }
+  function getPointerPixelIndex(event) {
+    let bounds = pixelCanvas?.getBoundingClientRect()
 
-    let svgBounds = event.currentTarget.getBoundingClientRect()
-    let x = Math.floor((event.clientX - svgBounds.left) / pixelWidth)
-    let y = Math.floor((event.clientY - svgBounds.top) / pixelHeight)
+    return getPixelIndexFromPoint({
+      cellPixelIndexes,
+      columnCount: pixelColumnCount,
+      point: bounds
+        ? {
+            x: event.clientX - bounds.left - canvasOverflow,
+            y: event.clientY - bounds.top - canvasOverflow,
+            width: displayWidth,
+            height: displayHeight
+          }
+        : undefined,
+      rowCount: pixelRowCount
+    })
+  }
 
-    if (x < 0 || y < 0 || x >= pixelColumnCount || y >= pixelRowCount) {
-      return undefined
-    }
+  function getPointerPathIndexes(pixelIndex) {
+    if (pixelIndex === undefined) return []
 
-    let pixelId = "x" + String(x + 1) + "y" + String(y + 1)
-
-    return pixelIds.has(pixelId) ? pixelCanvas.querySelector("#" + pixelId) : undefined
+    return getGridLinePixelIndexes({
+      cellPixelIndexes,
+      columnCount: pixelColumnCount,
+      fromPixel: pixelRecords[activePointerPixelIndex],
+      rowCount: pixelRowCount,
+      toPixel: pixelRecords[pixelIndex]
+    })
   }
 
   function updateActivePointerPixel(event) {
-    let pixelElement = getPixelFromPoint(event)
+    if (event.currentTarget.classList.contains("non-reactive")) return
 
-    if (pixelElement !== activePointerPixel) {
-      if (activePointerPixel) {
-        deactivatePixel(activePointerPixel)
-      }
-      activePointerPixel = pixelElement
-    }
+    let pixelIndex = getPointerPixelIndex(event)
 
-    if (activePointerPixel) {
-      activatePixel(activePointerPixel)
-    }
+    if (pixelIndex === activePointerPixelIndex) return
+
+    let nextIndexSet = new Set(getPointerPathIndexes(pixelIndex).flatMap(getPixelNeighborhoodIndexes))
+
+    deactivatePixelIndexes({
+      indexes: [...activePointerNeighborhoodIndexes].filter(index => !nextIndexSet.has(index)),
+      isTransitionMode,
+      now: performance.now(),
+      states: pixelStates
+    })
+    activatePixelIndexes({
+      indexes: [...nextIndexSet].filter(index => !activePointerNeighborhoodIndexes.has(index)),
+      isTransitionMode,
+      now: performance.now(),
+      onRevealPixel: revealPixel,
+      states: pixelStates
+    })
+
+    activePointerNeighborhoodIndexes = nextIndexSet
+    activePointerPixelIndex = pixelIndex
+    scheduleRender()
   }
 
   function isPrimaryTouchPointer(event) {
     return event.isPrimary && ["pen", "touch"].includes(event.pointerType)
   }
 
+  function isMousePointer(event) {
+    return event.pointerType == "mouse" || event.pointerType == ""
+  }
+
   function handlePixelPointerDown(event) {
-    if (!isPrimaryTouchPointer(event) || activePointerId !== undefined || !getPixelFromPoint(event)) {
+    if (!isPrimaryTouchPointer(event) || activePointerId !== undefined || getPointerPixelIndex(event) === undefined) {
       return
     }
 
@@ -252,23 +282,30 @@
   }
 
   function handlePixelPointerMove(event) {
-    if (event.pointerId !== activePointerId) {
-      return
+    if (event.pointerId === activePointerId) {
+      event.preventDefault()
+      updateActivePointerPixel(event)
+    } else if (activePointerId === undefined && isMousePointer(event)) {
+      updateActivePointerPixel(event)
     }
-
-    event.preventDefault()
-    updateActivePointerPixel(event)
   }
 
   function releaseActivePointer() {
-    if (activePointerPixel) {
-      deactivatePixel(activePointerPixel)
-    }
+    deactivatePixelIndexes({
+      indexes: [...activePointerNeighborhoodIndexes],
+      isTransitionMode,
+      now: performance.now(),
+      states: pixelStates
+    })
+    scheduleRender()
+
     if (activePointerId !== undefined && activePointerTarget?.hasPointerCapture?.(activePointerId)) {
       activePointerTarget.releasePointerCapture(activePointerId)
     }
+
     activePointerId = undefined
-    activePointerPixel = undefined
+    activePointerPixelIndex = undefined
+    activePointerNeighborhoodIndexes = new Set()
     activePointerTarget = undefined
   }
 
@@ -287,18 +324,13 @@
     }
   }
 
-  $: {
-    if (width && height && profilePhoto && pixelCanvas) {
-      pixelWidth = width / pixelColumnCount
-      imgHeightDifference = Math.max(height - profilePhoto.clientHeight, 0)
-      pixelHeight = (height - imgHeightDifference) / pixelRowCount
-      appendPixels()
+  function handlePixelPointerLeave(event) {
+    if (activePointerId === undefined && isMousePointer(event)) {
+      releaseActivePointer()
     }
   }
 
-  // Credit is due to this blocks page for the process defined below: http://bl.ocks.org/mrtriangle/11222485
-  // I took what was there and made adjustments based on preference and version differences, but the basic foundation was all set up on that page.
-  let executeLaserEye = function (i, cxInput, cyInput) {
+  let executeLaserEye = function (i, cxInput, cyInput, radiusBasis) {
     let circles = select(laserEyeCanvas)
       .append("circle")
       .attr("cx", cxInput)
@@ -310,21 +342,20 @@
 
     circles
       .transition()
-      // This delay is increasingly long for each circle.
-      // Additional seconds keep the eyes red for a few seconds before transitioning.
       .delay(i * 225 + 500)
       .duration(3000)
-      .attr("r", 300)
+      .attr("r", radiusBasis * 0.75)
       .style("stroke-width", 0)
       .style("stroke-opacity", 0)
       .on("end", () => circles.remove())
   }
 
   let executeLaserEyes = function () {
+    if (!displayWidth || !displayHeight || !laserEyeCanvas) return
+
     Array.from({ length: 4 }, (_, index) => index).forEach(i => {
-      // Appending two laser eyes, each with manually input x/y values.
-      executeLaserEye(i, width * 0.44, (height - imgHeightDifference) * 0.5)
-      executeLaserEye(i, width * 0.6125, (height - imgHeightDifference) * 0.49)
+      executeLaserEye(i, displayWidth * 0.44, displayHeight * 0.5, displayWidth)
+      executeLaserEye(i, displayWidth * 0.6125, displayHeight * 0.49, displayWidth)
     })
   }
 
@@ -333,173 +364,63 @@
       laserEyesTimer.stop()
       laserEyesTimer = undefined
     }
+
+    select(laserEyeCanvas).selectAll("circle").interrupt().remove()
   }
 
-  function stopAutoTransition({ resetPixels = false } = {}) {
+  function handleLaserVisionChange({ detail }) {
+    laserVisionEnabled = detail.checked
+
+    if (laserVisionEnabled) {
+      executeLaserEyes()
+      laserEyesTimer = interval(executeLaserEyes, 3000)
+    } else {
+      stopLaserEyes()
+    }
+  }
+
+  function stopAutoTransition({ reset = false } = {}) {
     if (autoTransitionFrame) {
       cancelAnimationFrame(autoTransitionFrame)
       autoTransitionFrame = undefined
     }
-    autoTransitionPaths.forEach(path => deactivateTransitionIds(path.activeSliceIds))
+
     autoTransitionPaths = []
-    autoTransitionLastStepTime = undefined
+    autoTransitionNextStepTime = undefined
     autoTransitionKey = undefined
 
-    if (resetPixels && pixelCanvas) {
-      appendPixels()
+    if (reset) {
+      resetPixels()
     }
-  }
-
-  function getPixelSelector(x, y) {
-    let id = "x" + String(x + 1) + "y" + String(y + 1)
-
-    return pixelIds.has(id) ? "#" + id : undefined
-  }
-
-  function getAutoTransitionSliceIds(points) {
-    return points.map(({ x, y }) => getPixelSelector(x, y)).filter(Boolean)
-  }
-
-  function createVerticalAutoTransitionFramesSlice({ x, minY, maxY, cornerIndex }) {
-    return {
-      cornerIndex,
-      ids: getAutoTransitionSliceIds(Array.from({ length: maxY - minY + 1 }, (_, index) => ({ x, y: minY + index })))
-    }
-  }
-
-  function createHorizontalAutoTransitionFramesSlice({ minX, maxX, y, cornerIndex }) {
-    return {
-      cornerIndex,
-      ids: getAutoTransitionSliceIds(Array.from({ length: maxX - minX + 1 }, (_, index) => ({ x: minX + index, y })))
-    }
-  }
-
-  function rotateAutoTransitionFramesSlices(slices, cornerIndex) {
-    let startIndex = slices.findIndex(slice => slice.cornerIndex == cornerIndex)
-
-    if (startIndex <= 0) {
-      return slices
-    }
-
-    return [...slices.slice(startIndex), ...slices.slice(0, startIndex)]
-  }
-
-  function createAutoTransitionFramesSlices({ cornerIndex, maxX, maxY, minX, minY, ringWidth }) {
-    let slices = []
-
-    for (let x = minX; x <= maxX; x += 1) {
-      slices.push(
-        createVerticalAutoTransitionFramesSlice({
-          cornerIndex: x == minX ? 0 : x == maxX ? 1 : undefined,
-          maxY: minY + ringWidth - 1,
-          minY,
-          x
-        })
-      )
-    }
-
-    for (let y = minY + ringWidth; y <= maxY; y += 1) {
-      slices.push(
-        createHorizontalAutoTransitionFramesSlice({
-          cornerIndex: y == maxY ? 2 : undefined,
-          maxX,
-          minX: maxX - ringWidth + 1,
-          y
-        })
-      )
-    }
-
-    for (let x = maxX - ringWidth; x >= minX; x -= 1) {
-      slices.push(
-        createVerticalAutoTransitionFramesSlice({
-          cornerIndex: x == minX ? 3 : undefined,
-          maxY,
-          minY: maxY - ringWidth + 1,
-          x
-        })
-      )
-    }
-
-    for (let y = maxY - ringWidth; y >= minY + ringWidth; y -= 1) {
-      slices.push(createHorizontalAutoTransitionFramesSlice({ maxX: minX + ringWidth - 1, minX, y }))
-    }
-
-    return rotateAutoTransitionFramesSlices(
-      slices.filter(slice => slice.ids.length),
-      cornerIndex
-    )
-  }
-
-  function createAutoTransitionFramesPaths(cornerIndex) {
-    let baseRingWidth = getTransitionRegionWidth()
-    let minDimension = Math.min(pixelColumnCount, pixelRowCount)
-    let ringCount = Math.ceil(minDimension / (baseRingWidth * 2))
-
-    if (!ringCount) {
-      return []
-    }
-
-    let paths = Array.from({ length: ringCount }, (_, index) => {
-      let inset = index * baseRingWidth
-      let remainingSize = minDimension - inset * 2
-      let ringWidth = index == ringCount - 1 ? Math.ceil(remainingSize / 2) : baseRingWidth
-      let minX = inset
-      let minY = inset
-      let maxX = pixelColumnCount - 1 - inset
-      let maxY = pixelRowCount - 1 - inset
-      let pathCornerIndex = index % 2 ? (cornerIndex + 2) % 4 : cornerIndex
-
-      return {
-        activeSliceIds: [],
-        activeSliceIndex: undefined,
-        cornerIndex: pathCornerIndex,
-        maxX,
-        maxY,
-        minX,
-        minY,
-        ringWidth,
-        slices: createAutoTransitionFramesSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY, ringWidth })
-      }
-    })
-
-    return paths
-  }
-
-  function createAutoTransitionDiagonalPaths(cornerIndex) {
-    let mirrorX = cornerIndex == 1 || cornerIndex == 2
-    let mirrorY = cornerIndex == 2 || cornerIndex == 3
-    let diagonalIds = Array.from({ length: pixelColumnCount + pixelRowCount - 1 }, () => [])
-
-    pixels.forEach(({ x, y, id }) => {
-      let diagonalX = mirrorX ? pixelColumnCount - 1 - x : x
-      let diagonalY = mirrorY ? pixelRowCount - 1 - y : y
-
-      diagonalIds[diagonalX + diagonalY].push("#" + id)
-    })
-
-    return [
-      {
-        activeSliceIds: [],
-        activeSliceIndex: undefined,
-        slices: diagonalIds.filter(ids => ids.length).map(ids => ({ ids }))
-      }
-    ]
   }
 
   function advanceAutoTransition(timestamp) {
     if (
       autoTransitionPaths.length &&
-      (autoTransitionLastStepTime === undefined || timestamp - autoTransitionLastStepTime >= autoTransitionStepInterval)
+      (autoTransitionNextStepTime === undefined || timestamp >= autoTransitionNextStepTime)
     ) {
-      autoTransitionLastStepTime = timestamp
+      let currentStepTime = autoTransitionNextStepTime ?? timestamp
+
+      if (timestamp - currentStepTime >= autoTransitionStepInterval) {
+        currentStepTime = timestamp
+      }
+
+      autoTransitionNextStepTime = currentStepTime + autoTransitionStepInterval
 
       autoTransitionPaths.forEach(path => {
-        let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
+        let minimumSetDelay = Math.max(
+          transitionReuseDuration - (path.slices.length - 2) * autoTransitionStepInterval,
+          0
+        )
 
-        deactivateTransitionIds(path.activeSliceIds)
-        path.activeSliceIndex = sliceIndex
-        path.activeSliceIds = activateTransitionIds(path.slices[sliceIndex].ids)
+        advanceAutoTransitionPath({
+          path,
+          now: currentStepTime,
+          setDelay: Math.max(resolvedAutoTransitionSetDelay, minimumSetDelay),
+          states: pixelStates
+        })
       })
+      scheduleRender()
     }
 
     autoTransitionFrame = requestAnimationFrame(advanceAutoTransition)
@@ -510,28 +431,30 @@
       return
     }
 
-    stopAutoTransition({ resetPixels: true })
+    stopAutoTransition({ reset: true })
     autoTransitionKey = nextAutoTransitionKey
     autoTransitionPaths = isAutoTransitionDiagonal
-      ? createAutoTransitionDiagonalPaths(Math.floor(Math.random() * 4))
-      : createAutoTransitionFramesPaths(Math.floor(Math.random() * 4))
+      ? createAutoTransitionDiagonalPaths({
+          columnCount: pixelColumnCount,
+          cornerIndex: Math.floor(Math.random() * 4),
+          pixels: pixelRecords,
+          rowCount: pixelRowCount
+        })
+      : createAutoTransitionFramePaths({
+          cellPixelIndexes,
+          columnCount: pixelColumnCount,
+          cornerIndex: Math.floor(Math.random() * 4),
+          radius: transitionPixelRadius,
+          rowCount: pixelRowCount
+        })
     autoTransitionFrame = requestAnimationFrame(advanceAutoTransition)
   }
 
   function setModeValue(value) {
-    stopAutoTransition({ resetPixels: isAutoTransition })
+    stopAutoTransition()
     releaseActivePointer()
     sliderValue = value
-    revealedPixelIds = new Set()
-    stopLaserEyes()
-
-    if (modeItems[value]?.value == "reveal_my_laser_vision") {
-      // The timer is slightly longer than the final laser eye circle's total transition time.
-      laserEyesTimer = interval(executeLaserEyes, 3000)
-    }
-    if (pixelCanvas) {
-      appendPixels()
-    }
+    resetPixels()
   }
 
   function handleModeValueChange({ detail: e }) {
@@ -542,23 +465,20 @@
     }
   }
 
+  $: if (pixelCanvas && geometryKey) {
+    scheduleRender()
+  }
+
   $: if (forcedMode && forcedModeValue >= 0 && sliderValue != forcedModeValue) {
     setModeValue(forcedModeValue)
   }
 
-  $: if (
-    isAutoTransition &&
-    !prefersReducedMotion &&
-    pixelCanvas &&
-    pixelWidth &&
-    pixelHeight &&
-    autoTransitionConfigKey
-  ) {
+  $: if (isAutoTransition && !prefersReducedMotion && pixelCanvas && geometry && autoTransitionConfigKey) {
     startAutoTransition(autoTransitionConfigKey)
   }
 
   $: if (!isAutoTransition || prefersReducedMotion) {
-    stopAutoTransition({ resetPixels: isAutoTransition })
+    stopAutoTransition({ reset: isAutoTransition })
   }
 
   onMount(() => {
@@ -572,61 +492,87 @@
   })
 
   onDestroy(() => {
-    stopAutoTransition({ resetPixels: true })
+    isDestroyed = true
+
+    if (renderFrame) {
+      cancelAnimationFrame(renderFrame)
+    }
+
+    stopAutoTransition({ reset: true })
     stopLaserEyes()
     releaseActivePointer()
   })
 </script>
 
 <div class="mb-8 flex flex-col items-center">
-  <div class="w-fit max-w-md" bind:clientWidth={width} bind:clientHeight={height}>
-    <img bind:this={profilePhoto} src={profilePhotoSrc} alt="Charlie Yaris" />
-  </div>
-  <!-- Touch and pen drags do not mouseover sibling SVG rects, so map the point to the pixel grid instead. -->
-  <svg
-    class="absolute overflow-visible"
-    id="profile_photo"
-    style="touch-action: none;"
+  <div
+    class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
-    {width}
-    {height}
+    style:touch-action="none"
+    bind:clientWidth={displayWidth}
+    bind:clientHeight={displayHeight}
     on:pointerdown={handlePixelPointerDown}
     on:pointermove={handlePixelPointerMove}
     on:pointerup={handlePixelPointerUp}
     on:pointercancel={handlePixelPointerCancel}
+    on:pointerleave={handlePixelPointerLeave}
   >
-    <g bind:this={laserEyeCanvas}></g>
-    <g bind:this={pixelCanvas}></g>
-  </svg>
-  {#if laserEyeCanvas && pixelCanvas}
-    {#if showModeSelection}
-      <div class="mt-2 flex flex-col items-center">
-        <Select
-          wrapperClasses="w-80 text-sm"
-          value={modeSelectValue}
-          items={modeItems}
-          clearable={false}
-          searchable={false}
-          centeredValue={true}
-          centeredItems={true}
-          on:valueChange={handleModeValueChange}
-        />
-      </div>
-    {/if}
-    {#if !isAutoTransition}
-      <div class="mt-4 flex flex-col items-center">
-        <div class="text-xl">Hover on my face!</div>
-        {#if !isTransitionMode}
-          <div class="w-64">
-            <ProgressBar
-              value={revealedPixelRatio * 100}
-              addPercentSign={true}
-              label="Pixels Revealed"
-              decimalPlaces={1}
-              definition="Can you reveal 90%?"
-              {progressBarColorScale}
-            />
-          </div>
+    <img
+      class="block h-auto max-w-full"
+      src={profilePhotoSrc}
+      alt="Charlie Yaris"
+      width={profilePhotoNaturalSize}
+      height={profilePhotoNaturalSize}
+      on:load={scheduleRender}
+    />
+    <svg class="pointer-events-none absolute left-0 top-0 overflow-hidden" width={displayWidth} height={displayHeight}>
+      <g bind:this={laserEyeCanvas}></g>
+    </svg>
+    <canvas
+      bind:this={pixelCanvas}
+      class="pointer-events-none absolute"
+      style:left="{-canvasOverflow}px"
+      style:top="{-canvasOverflow}px"
+      style:width="{canvasWidth}px"
+      style:height="{canvasHeight}px"
+      style:z-index={60}
+      aria-hidden="true"
+    ></canvas>
+  </div>
+  {#if isProfileReady}
+    {#if showModeSelection || !isAutoTransition}
+      <div class="mt-4 flex flex-col items-center gap-2">
+        {#if showModeSelection}
+          <Select
+            wrapperClasses="w-64"
+            value={modeSelectValue}
+            items={modeItems}
+            clearable={false}
+            searchable={false}
+            centeredValue={true}
+            centeredItems={true}
+            on:valueChange={handleModeValueChange}
+          />
+          <Toggle
+            checked={laserVisionEnabled}
+            label="Laser vision"
+            wrapperClasses="w-64"
+            on:change={handleLaserVisionChange}
+          />
+        {/if}
+        {#if !isAutoTransition}
+          {#if !isTransitionMode}
+            <div class="w-64">
+              <ProgressBar
+                value={revealedPixelRatio * 100}
+                addPercentSign={true}
+                label="Pixels Revealed"
+                decimalPlaces={1}
+                definition="Can you reveal 90%?"
+                {progressBarColorScale}
+              />
+            </div>
+          {/if}
         {/if}
       </div>
     {/if}
@@ -634,8 +580,8 @@
     <Loading classes="mt-6 h-12 w-12" image="circle" />
   {/if}
 </div>
-{#if laserEyeCanvas && pixelCanvas && !isTransitionMode}
-  <div class="non-reactive fixed left-0 top-0">
+{#if isProfileReady && !isTransitionMode}
+  <div class="non-reactive pointer-events-none fixed left-0 top-0 z-[100]">
     {#key sliderValue}
       <FireworkShow fireworkShow={revealedPixelRatio >= fireworkRevealTrigger} />
     {/key}

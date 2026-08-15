@@ -18,6 +18,7 @@ def positive_int(value: str) -> int:
     parsed_value = int(value)
     if parsed_value <= 0:
         raise argparse.ArgumentTypeError("must be a positive integer")
+
     return parsed_value
 
 
@@ -25,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate JSON pixel data from the profile favicon.")
     parser.add_argument("--x-max", type=positive_int, default=48, help="Pixel width for the resized source image.")
     parser.add_argument("--y-max", type=positive_int, default=48, help="Pixel height for the resized source image.")
+
     return parser.parse_args()
 
 
