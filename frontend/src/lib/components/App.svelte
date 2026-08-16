@@ -504,7 +504,7 @@
   })
 </script>
 
-<div class="mb-8 flex flex-col items-center">
+<div class="mb-8 flex flex-col items-center overflow-x-clip">
   <div
     class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
@@ -525,7 +525,7 @@
       height={profilePhotoNaturalSize}
       on:load={scheduleRender}
     />
-    <svg class="pointer-events-none absolute left-0 top-0 overflow-hidden" width={displayWidth} height={displayHeight}>
+    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
       <g bind:this={laserEyeCanvas}></g>
     </svg>
     <canvas
