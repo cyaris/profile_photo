@@ -504,7 +504,7 @@
   })
 </script>
 
-<div class="mb-8 flex flex-col items-center overflow-x-clip">
+<div class="mb-8 flex flex-col items-center">
   <div
     class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
