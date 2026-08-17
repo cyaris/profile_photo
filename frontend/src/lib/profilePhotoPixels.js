@@ -433,29 +433,61 @@ function createFilledSlices({ cornerIndex, maxX, maxY, minX, minY }, grid) {
   return slices.filter(slice => slice?.indexes?.length)
 }
 
+function createCornerSlices({ cornerIndex, mapPoint, ringWidth }, grid) {
+  let maxDiagonal = (ringWidth - 1) * 2
+  let slices = []
+
+  for (let diagonal = 0; diagonal <= maxDiagonal; diagonal += 1) {
+    let iStart = Math.max(0, diagonal - (ringWidth - 1))
+    let iEnd = Math.min(diagonal, ringWidth - 1)
+    let points = Array.from({ length: iEnd - iStart + 1 }, (_, index) =>
+      mapPoint(iStart + index, diagonal - iStart - index)
+    )
+    let slice = createSlice(points, grid)
+
+    if (slice) slices.push({ ...slice, cornerIndex: diagonal == 0 ? cornerIndex : undefined })
+  }
+
+  return slices
+}
+
 function createFrameSlices({ cornerIndex, maxX, maxY, minX, minY, ringWidth }, grid) {
   let slices = []
 
-  for (let x = minX; x <= maxX; x += 1) {
+  for (let x = minX; x <= maxX - ringWidth; x += 1) {
     slices.push(
-      createVerticalSlice(
-        { cornerIndex: x == minX ? 0 : x == maxX ? 1 : undefined, maxY: minY + ringWidth - 1, minY, x },
-        grid
-      )
+      createVerticalSlice({ cornerIndex: x == minX ? 0 : undefined, maxY: minY + ringWidth - 1, minY, x }, grid)
     )
   }
 
-  for (let y = minY + ringWidth; y <= maxY; y += 1) {
-    slices.push(
-      createHorizontalSlice({ cornerIndex: y == maxY ? 2 : undefined, maxX, minX: maxX - ringWidth + 1, y }, grid)
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 1, mapPoint: (i, j) => ({ x: maxX - ringWidth + 1 + i, y: minY + j }), ringWidth },
+      grid
     )
+  )
+
+  for (let y = minY + ringWidth; y <= maxY - ringWidth; y += 1) {
+    slices.push(createHorizontalSlice({ maxX, minX: maxX - ringWidth + 1, y }, grid))
   }
 
-  for (let x = maxX - ringWidth; x >= minX; x -= 1) {
-    slices.push(
-      createVerticalSlice({ cornerIndex: x == minX ? 3 : undefined, maxY, minY: maxY - ringWidth + 1, x }, grid)
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 2, mapPoint: (i, j) => ({ x: maxX - i, y: maxY - ringWidth + 1 + j }), ringWidth },
+      grid
     )
+  )
+
+  for (let x = maxX - ringWidth; x >= minX + ringWidth; x -= 1) {
+    slices.push(createVerticalSlice({ maxY, minY: maxY - ringWidth + 1, x }, grid))
   }
+
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 3, mapPoint: (i, j) => ({ x: minX + ringWidth - 1 - i, y: maxY - j }), ringWidth },
+      grid
+    )
+  )
 
   for (let y = maxY - ringWidth; y >= minY + ringWidth; y -= 1) {
     slices.push(createHorizontalSlice({ maxX: minX + ringWidth - 1, minX, y }, grid))
