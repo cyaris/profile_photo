@@ -113,6 +113,20 @@ These local wrappers inherit their reusable implementations from `cyaris/shared-
 inputs, and secrets are documented in the
 [shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
 
+### `.github/workflows/auto-create-dev-pr.yml`
+
+The `Auto-create dev pull request` workflow runs on pushes to `dev`, then calls the
+[shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml)
+to open a pull request from `dev` to `main` when one doesn't already exist. It passes the repository's
+`RELEASE_TOKEN` secret so trusted user or agent-authored pushes to `dev` can open the pull request.
+
+### `.github/workflows/auto-release.yml`
+
+The `Auto release` workflow runs from manual dispatch only and calls the
+[shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
+repository contributes `.github/release-policy.yml` overrides. Release creation or existing-release updates require
+reviewing the generated plan and explicitly enabling publication for an approved run.
+
 ### `.github/workflows/rollup.yml`
 
 The `Rollup` workflow runs on pushes to `dev` and `main` and on manual dispatch, then calls the
@@ -133,13 +147,6 @@ minutes before the GitHub Pages build for `cyaris.github.io`, and on manual disp
 watches `svelte-lib`'s and `fireworks`'s `main` branches and, when either has moved since the last check, dispatches
 this repository's own `Rollup` workflow on `main` so the build picks up the new upstream commit without waiting for a
 push here.
-
-### `.github/workflows/auto-release.yml`
-
-The `Auto release` workflow runs from manual dispatch only and calls the
-[shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
-repository contributes `.github/release-policy.yml` overrides. Release creation or existing-release updates require
-reviewing the generated plan and explicitly enabling publication for an approved run.
 
 ### `.github/workflows/workflow-validation.yml`
 
