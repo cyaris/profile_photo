@@ -9,7 +9,7 @@
 <slot />
 
 <style>
-  :global(body) {
+  :global(html) {
     overflow-x: clip;
   }
 </style>
