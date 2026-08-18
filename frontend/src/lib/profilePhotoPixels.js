@@ -2,9 +2,8 @@ import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
-const finalStrokeWidth = 0.3
-const initialStrokeWidth = 0.075
-const maxStrokePixelRatio = 2
+const finalStrokeCellRatio = 0.032
+const initialStrokeCellRatio = 0.008
 const timingTolerance = 0.001
 const transitionHiddenHoldDuration = 300
 
@@ -36,8 +35,8 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
   return cellPixelIndexes[getCellIndex({ columnCount, x, y })]
 }
 
-function getStrokeWidth(width, geometry) {
-  return width * (geometry.strokeScale ?? 1)
+function getStrokeWidth(cellRatio, geometry) {
+  return cellRatio * geometry.cellWidth
 }
 
 function getPixelDisplay(pixel, geometry) {
@@ -50,7 +49,7 @@ function getPixelDisplay(pixel, geometry) {
     translateX: 0,
     translateY: 0,
     opacity: 1,
-    strokeWidth: getStrokeWidth(initialStrokeWidth, geometry)
+    strokeWidth: getStrokeWidth(initialStrokeCellRatio, geometry)
   }
 }
 
@@ -75,7 +74,7 @@ function getActivatedPixelDisplay(pixel, geometry) {
     translateX: rotationTranslation.x,
     translateY: rotationTranslation.y,
     opacity: 0,
-    strokeWidth: getStrokeWidth(finalStrokeWidth, geometry)
+    strokeWidth: getStrokeWidth(finalStrokeCellRatio, geometry)
   }
 }
 
@@ -112,7 +111,7 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
     opacity: 1 - fadeProgress,
-    strokeWidth: getStrokeWidth(finalStrokeWidth, geometry)
+    strokeWidth: getStrokeWidth(finalStrokeCellRatio, geometry)
   }
 }
 
@@ -144,7 +143,10 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
     opacity: reverseProgress,
-    strokeWidth: getStrokeWidth(finalStrokeWidth + (initialStrokeWidth - finalStrokeWidth) * strokeProgress, geometry)
+    strokeWidth: getStrokeWidth(
+      finalStrokeCellRatio + (initialStrokeCellRatio - finalStrokeCellRatio) * strokeProgress,
+      geometry
+    )
   }
 }
 
@@ -392,13 +394,12 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   let overflow = geometry.overflow ?? 0
   let canvasHeight = geometry.height + overflow * 2
   let canvasWidth = geometry.width + overflow * 2
-  let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
+  let { context } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
-  let renderGeometry = { ...geometry, strokeScale: Math.min(pixelRatio, maxStrokePixelRatio) / pixelRatio }
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
-    renderState: getPixelRenderState(pixel, states[pixel.index], renderGeometry, timestamp)
+    renderState: getPixelRenderState(pixel, states[pixel.index], geometry, timestamp)
   }))
 
   context.clearRect(0, 0, canvasWidth, canvasHeight)
