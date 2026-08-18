@@ -507,7 +507,7 @@
   <div
     class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
-    style:touch-action="none"
+    style:touch-action="pinch-zoom"
     bind:clientWidth={displayWidth}
     bind:clientHeight={displayHeight}
     on:pointerdown={handlePixelPointerDown}
