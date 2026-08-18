@@ -1,4 +1,4 @@
-import { clamp, easeCubicInOut } from "svelte-lib/functions"
+import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
@@ -81,8 +81,20 @@ function getActivatedPixelDisplay(pixel, geometry) {
 
 function getActivatingProgress(state, timestamp) {
   return {
-    moveProgress: easeCubicInOut(clamp((timestamp - state.activationStart - transitionDelay) / transitionDuration)),
-    fadeProgress: easeCubicInOut(clamp((timestamp - state.activationStart - transitionFadeDelay) / transitionDuration))
+    moveProgress: getEasedProgress({
+      delay: transitionDelay,
+      duration: transitionDuration,
+      ease: easeCubicInOut,
+      now: timestamp,
+      start: state.activationStart
+    }),
+    fadeProgress: getEasedProgress({
+      delay: transitionFadeDelay,
+      duration: transitionDuration,
+      ease: easeCubicInOut,
+      now: timestamp,
+      start: state.activationStart
+    })
   }
 }
 
@@ -107,12 +119,20 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
 function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
   let normal = getPixelDisplay(pixel, geometry)
   let activated = getActivatedPixelDisplay(pixel, geometry)
-  let reverseProgress = easeCubicInOut(
-    clamp((timestamp - state.deactivationStart - transitionDeactivateDelay) / transitionDuration)
-  )
-  let strokeProgress = easeCubicInOut(
-    clamp((timestamp - state.deactivationStart - transitionDeactivateDelay - transitionDuration) / transitionDuration)
-  )
+  let reverseProgress = getEasedProgress({
+    delay: transitionDeactivateDelay,
+    duration: transitionDuration,
+    ease: easeCubicInOut,
+    now: timestamp,
+    start: state.deactivationStart
+  })
+  let strokeProgress = getEasedProgress({
+    delay: transitionDeactivateDelay + transitionDuration,
+    duration: transitionDuration,
+    ease: easeCubicInOut,
+    now: timestamp,
+    start: state.deactivationStart
+  })
   let moveProgress = 1 - reverseProgress
 
   return {

@@ -1,12 +1,12 @@
 <script>
-  import "d3-transition"
-
-  import { select } from "d3-selection"
   import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
+  import { createAnimationLoop } from "svelte-lib/functions"
+  import { getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
+  import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
   import {
     activatePixelIndexes,
     advanceAutoTransitionPath,
@@ -97,17 +97,16 @@
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
   let modeSelectValue = modeItems[sliderValue]
   let laserEyesTimer
+  let laserEyeCircles = []
   let laserVisionEnabled = false
   let activePointerId
   let activePointerPixelIndex
   let activePointerTarget
   let activePointerNeighborhoodIndexes = new Set()
-  let autoTransitionFrame
   let autoTransitionPaths = []
   let autoTransitionNextStepTime
   let autoTransitionKey
   let prefersReducedMotion = false
-  let renderFrame
   let isDestroyed = false
 
   $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
@@ -160,24 +159,36 @@
     pixelRowCount
   ].join(":")
   $: isProfileReady = pixelCanvas && laserEyeCanvas && geometry
-
-  function scheduleRender() {
-    if (!isDestroyed && !renderFrame) {
-      renderFrame = requestAnimationFrame(renderPixels)
-    }
-  }
+  $: laserEyeOverflow = displayWidth ? displayWidth * laserEyeRadiusScale : 0
 
   function renderPixels(timestamp) {
-    renderFrame = undefined
+    if (!pixelCanvas || !geometry) return false
 
-    if (!pixelCanvas || !geometry) {
-      return
-    }
-
-    if (drawPixelCanvas({ canvas: pixelCanvas, geometry, pixels: pixelRecords, states: pixelStates, timestamp })) {
-      scheduleRender()
-    }
+    return drawPixelCanvas({ canvas: pixelCanvas, geometry, pixels: pixelRecords, states: pixelStates, timestamp })
   }
+
+  let pixelAnimationLoop = createAnimationLoop(renderPixels)
+
+  function scheduleRender() {
+    if (!isDestroyed) pixelAnimationLoop.start()
+  }
+
+  function laserEyeFrame(timestamp) {
+    let result = drawLaserEyeCanvas({
+      canvas: laserEyeCanvas,
+      circles: laserEyeCircles,
+      height: displayHeight,
+      overflow: laserEyeOverflow,
+      timestamp,
+      width: displayWidth
+    })
+
+    laserEyeCircles = result.circles
+
+    return result.hasActive
+  }
+
+  let laserEyeAnimationLoop = createAnimationLoop(laserEyeFrame)
 
   function revealPixel(index) {
     if (revealedPixels[index]) return
@@ -204,19 +215,10 @@
   }
 
   function getPointerPixelIndex(event) {
-    let bounds = pixelCanvas?.getBoundingClientRect()
-
     return getPixelIndexFromPoint({
       cellPixelIndexes,
       columnCount: pixelColumnCount,
-      point: bounds
-        ? {
-            x: event.clientX - bounds.left - canvasOverflow,
-            y: event.clientY - bounds.top - canvasOverflow,
-            width: displayWidth,
-            height: displayHeight
-          }
-        : undefined,
+      point: getCanvasPointerPoint(pixelCanvas, event, { offsetX: canvasOverflow, offsetY: canvasOverflow }),
       rowCount: pixelRowCount
     })
   }
@@ -329,33 +331,14 @@
     }
   }
 
-  let executeLaserEye = function (i, cxInput, cyInput, radiusBasis) {
-    let circles = select(laserEyeCanvas)
-      .append("circle")
-      .attr("cx", cxInput)
-      .attr("cy", cyInput)
-      .attr("r", 0.25)
-      .style("fill", "transparent")
-      .style("stroke", "#cc0000")
-      .style("stroke-width", 7.5)
-
-    circles
-      .transition()
-      .delay(i * 225 + 500)
-      .duration(3000)
-      .attr("r", radiusBasis * 0.75)
-      .style("stroke-width", 0)
-      .style("stroke-opacity", 0)
-      .on("end", () => circles.remove())
-  }
-
-  let executeLaserEyes = function () {
+  function executeLaserEyes() {
     if (!displayWidth || !displayHeight || !laserEyeCanvas) return
 
-    Array.from({ length: 4 }, (_, index) => index).forEach(i => {
-      executeLaserEye(i, displayWidth * 0.44, displayHeight * 0.5, displayWidth)
-      executeLaserEye(i, displayWidth * 0.6125, displayHeight * 0.49, displayWidth)
-    })
+    laserEyeCircles = [
+      ...laserEyeCircles,
+      ...createLaserEyeBurst({ displayHeight, displayWidth, now: performance.now() })
+    ]
+    laserEyeAnimationLoop.start()
   }
 
   function stopLaserEyes() {
@@ -364,7 +347,19 @@
       laserEyesTimer = undefined
     }
 
-    select(laserEyeCanvas).selectAll("circle").interrupt().remove()
+    laserEyeAnimationLoop.stop()
+    laserEyeCircles = []
+
+    if (laserEyeCanvas) {
+      drawLaserEyeCanvas({
+        canvas: laserEyeCanvas,
+        circles: [],
+        height: displayHeight,
+        overflow: laserEyeOverflow,
+        timestamp: performance.now(),
+        width: displayWidth
+      })
+    }
   }
 
   function handleLaserVisionChange({ detail }) {
@@ -375,21 +370,6 @@
       laserEyesTimer = interval(executeLaserEyes, 3000)
     } else {
       stopLaserEyes()
-    }
-  }
-
-  function stopAutoTransition({ reset = false } = {}) {
-    if (autoTransitionFrame) {
-      cancelAnimationFrame(autoTransitionFrame)
-      autoTransitionFrame = undefined
-    }
-
-    autoTransitionPaths = []
-    autoTransitionNextStepTime = undefined
-    autoTransitionKey = undefined
-
-    if (reset) {
-      resetPixels()
     }
   }
 
@@ -422,11 +402,24 @@
       scheduleRender()
     }
 
-    autoTransitionFrame = requestAnimationFrame(advanceAutoTransition)
+    return true
+  }
+
+  let autoTransitionAnimationLoop = createAnimationLoop(advanceAutoTransition)
+
+  function stopAutoTransition({ reset = false } = {}) {
+    autoTransitionAnimationLoop.stop()
+    autoTransitionPaths = []
+    autoTransitionNextStepTime = undefined
+    autoTransitionKey = undefined
+
+    if (reset) {
+      resetPixels()
+    }
   }
 
   function startAutoTransition(nextAutoTransitionKey) {
-    if (autoTransitionFrame && autoTransitionKey == nextAutoTransitionKey) {
+    if (autoTransitionKey == nextAutoTransitionKey) {
       return
     }
 
@@ -446,7 +439,7 @@
           radius: transitionPixelRadius,
           rowCount: pixelRowCount
         })
-    autoTransitionFrame = requestAnimationFrame(advanceAutoTransition)
+    autoTransitionAnimationLoop.start()
   }
 
   function setModeValue(value) {
@@ -493,10 +486,7 @@
   onDestroy(() => {
     isDestroyed = true
 
-    if (renderFrame) {
-      cancelAnimationFrame(renderFrame)
-    }
-
+    pixelAnimationLoop.stop()
     stopAutoTransition({ reset: true })
     stopLaserEyes()
     releaseActivePointer()
@@ -524,9 +514,15 @@
       height={profilePhotoNaturalSize}
       on:load={scheduleRender}
     />
-    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
-      <g bind:this={laserEyeCanvas}></g>
-    </svg>
+    <canvas
+      bind:this={laserEyeCanvas}
+      class="pointer-events-none absolute"
+      style:left="{-laserEyeOverflow}px"
+      style:top="{-laserEyeOverflow}px"
+      style:width="{displayWidth + laserEyeOverflow * 2}px"
+      style:height="{displayHeight + laserEyeOverflow * 2}px"
+      aria-hidden="true"
+    ></canvas>
     <canvas
       bind:this={pixelCanvas}
       class="pointer-events-none absolute"
@@ -554,7 +550,7 @@
           />
           <Toggle
             checked={laserVisionEnabled}
-            label="Laser vision"
+            label="Laser Vision"
             wrapperClasses="w-64"
             on:change={handleLaserVisionChange}
           />
