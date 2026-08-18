@@ -521,6 +521,7 @@
       style:top="{-laserEyeOverflow}px"
       style:width="{displayWidth + laserEyeOverflow * 2}px"
       style:height="{displayHeight + laserEyeOverflow * 2}px"
+      style:z-index={70}
       aria-hidden="true"
     ></canvas>
     <canvas
