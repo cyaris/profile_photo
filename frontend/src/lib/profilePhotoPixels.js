@@ -131,26 +131,40 @@ function getPixelRenderState(pixel, state, geometry, timestamp) {
   return getPixelDisplay(pixel, geometry)
 }
 
-function drawPixel(context, pixel, renderState) {
+function fillPixel(context, pixel, renderState) {
   if (renderState.opacity <= 0) return
 
+  context.globalAlpha = renderState.opacity
+  context.fillStyle = pixel.rgb
+
   if (!renderState.rotation) {
-    context.globalAlpha = renderState.opacity
-    context.fillStyle = pixel.rgb
-    context.lineWidth = renderState.strokeWidth
     context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
+
+    return
+  }
+
+  context.save()
+  context.translate(renderState.translateX, renderState.translateY)
+  context.rotate(renderState.rotation)
+  context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
+  context.restore()
+}
+
+function strokePixel(context, renderState) {
+  if (renderState.opacity <= 0) return
+
+  context.globalAlpha = renderState.opacity
+  context.lineWidth = renderState.strokeWidth
+
+  if (!renderState.rotation) {
     context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
 
     return
   }
 
   context.save()
-  context.globalAlpha = renderState.opacity
-  context.fillStyle = pixel.rgb
-  context.lineWidth = renderState.strokeWidth
   context.translate(renderState.translateX, renderState.translateY)
   context.rotate(renderState.rotation)
-  context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
   context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
   context.restore()
 }
@@ -356,13 +370,17 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   let { context } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
+  let pixelRenderStates = pixels.map(pixel => ({
+    pixel,
+    renderState: getPixelRenderState(pixel, states[pixel.index], geometry, timestamp)
+  }))
+
   context.clearRect(0, 0, canvasWidth, canvasHeight)
   context.save()
   context.translate(overflow, overflow)
   context.strokeStyle = "white"
-  pixels.forEach(pixel =>
-    drawPixel(context, pixel, getPixelRenderState(pixel, states[pixel.index], geometry, timestamp))
-  )
+  pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
+  pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
   context.restore()
 
   return compactFinishedStates(states, timestamp)
@@ -400,29 +418,76 @@ function createHorizontalSlice({ cornerIndex, maxX, minX, y }, grid) {
   }
 }
 
+function createFilledSlices({ cornerIndex, maxX, maxY, minX, minY }, grid) {
+  let sweepByColumn = maxX - minX >= maxY - minY
+  let reverse = sweepByColumn ? cornerIndex == 1 || cornerIndex == 2 : cornerIndex == 2 || cornerIndex == 3
+
+  let slices = sweepByColumn
+    ? Array.from({ length: maxX - minX + 1 }, (_, index) => createVerticalSlice({ maxY, minY, x: minX + index }, grid))
+    : Array.from({ length: maxY - minY + 1 }, (_, index) =>
+        createHorizontalSlice({ maxX, minX, y: minY + index }, grid)
+      )
+
+  if (reverse) slices.reverse()
+
+  return slices.filter(slice => slice?.indexes?.length)
+}
+
+function createCornerSlices({ cornerIndex, mapPoint, ringWidth }, grid) {
+  let maxDiagonal = (ringWidth - 1) * 2
+  let slices = []
+
+  for (let diagonal = 0; diagonal <= maxDiagonal; diagonal += 1) {
+    let iStart = Math.max(0, diagonal - (ringWidth - 1))
+    let iEnd = Math.min(diagonal, ringWidth - 1)
+    let points = Array.from({ length: iEnd - iStart + 1 }, (_, index) =>
+      mapPoint(iStart + index, diagonal - iStart - index)
+    )
+    let slice = createSlice(points, grid)
+
+    if (slice) slices.push({ ...slice, cornerIndex: diagonal == 0 ? cornerIndex : undefined })
+  }
+
+  return slices
+}
+
 function createFrameSlices({ cornerIndex, maxX, maxY, minX, minY, ringWidth }, grid) {
   let slices = []
 
-  for (let x = minX; x <= maxX; x += 1) {
+  for (let x = minX; x <= maxX - ringWidth; x += 1) {
     slices.push(
-      createVerticalSlice(
-        { cornerIndex: x == minX ? 0 : x == maxX ? 1 : undefined, maxY: minY + ringWidth - 1, minY, x },
-        grid
-      )
+      createVerticalSlice({ cornerIndex: x == minX ? 0 : undefined, maxY: minY + ringWidth - 1, minY, x }, grid)
     )
   }
 
-  for (let y = minY + ringWidth; y <= maxY; y += 1) {
-    slices.push(
-      createHorizontalSlice({ cornerIndex: y == maxY ? 2 : undefined, maxX, minX: maxX - ringWidth + 1, y }, grid)
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 1, mapPoint: (i, j) => ({ x: maxX - ringWidth + 1 + i, y: minY + j }), ringWidth },
+      grid
     )
+  )
+
+  for (let y = minY + ringWidth; y <= maxY - ringWidth; y += 1) {
+    slices.push(createHorizontalSlice({ maxX, minX: maxX - ringWidth + 1, y }, grid))
   }
 
-  for (let x = maxX - ringWidth; x >= minX; x -= 1) {
-    slices.push(
-      createVerticalSlice({ cornerIndex: x == minX ? 3 : undefined, maxY, minY: maxY - ringWidth + 1, x }, grid)
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 2, mapPoint: (i, j) => ({ x: maxX - i, y: maxY - ringWidth + 1 + j }), ringWidth },
+      grid
     )
+  )
+
+  for (let x = maxX - ringWidth; x >= minX + ringWidth; x -= 1) {
+    slices.push(createVerticalSlice({ maxY, minY: maxY - ringWidth + 1, x }, grid))
   }
+
+  slices.push(
+    ...createCornerSlices(
+      { cornerIndex: 3, mapPoint: (i, j) => ({ x: minX + ringWidth - 1 - i, y: maxY - j }), ringWidth },
+      grid
+    )
+  )
 
   for (let y = maxY - ringWidth; y >= minY + ringWidth; y -= 1) {
     slices.push(createHorizontalSlice({ maxX: minX + ringWidth - 1, minX, y }, grid))
@@ -450,13 +515,16 @@ export function createAutoTransitionFramePaths({ cellPixelIndexes, columnCount, 
     let maxY = rowCount - 1 - inset
     let remainingWidth = maxX - minX + 1
     let remainingHeight = maxY - minY + 1
-    let ringWidth = Math.min(baseRingWidth, Math.ceil(Math.min(remainingWidth, remainingHeight) / 2))
+    let ringWidth = Math.min(baseRingWidth, Math.floor(Math.min(remainingWidth, remainingHeight) / 2))
     let pathCornerIndex = index % 2 ? (cornerIndex + 2) % 4 : cornerIndex
 
     paths.push({
       activeIndexes: [],
       activeSliceIndex: undefined,
-      slices: createFrameSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY, ringWidth }, grid)
+      slices:
+        ringWidth < baseRingWidth
+          ? createFilledSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY }, grid)
+          : createFrameSlices({ cornerIndex: pathCornerIndex, maxX, maxY, minX, minY, ringWidth }, grid)
     })
   }
 

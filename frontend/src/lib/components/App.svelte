@@ -27,6 +27,8 @@
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
 
+  export let autoTransitionSetDelay = undefined
+  export let autoTransitionSetDuration = undefined
   export let forcedMode = undefined
   export let showModeSelection = true
   export let transitionPixelRadius = 2
@@ -107,9 +109,6 @@
   let prefersReducedMotion = false
   let renderFrame
   let isDestroyed = false
-
-  export let autoTransitionSetDuration = undefined
-  export let autoTransitionSetDelay = undefined
 
   $: revealedPixelRatio = revealedPixelCount / pixelRecords.length
   $: activeMode = modeItems[sliderValue]?.value ?? modeItems[0].value
@@ -525,7 +524,7 @@
       height={profilePhotoNaturalSize}
       on:load={scheduleRender}
     />
-    <svg class="pointer-events-none absolute left-0 top-0 overflow-hidden" width={displayWidth} height={displayHeight}>
+    <svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width={displayWidth} height={displayHeight}>
       <g bind:this={laserEyeCanvas}></g>
     </svg>
     <canvas

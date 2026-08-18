@@ -2,11 +2,7 @@
 
 ## Documentation
 
-- Keep README link behavior intentional and consistent. Use standard Markdown links by default, and use HTML anchors with `target="_blank"` and `rel="noopener noreferrer"` only when links should explicitly open in a new tab.
-- Keep README and AGENTS guidance focused on current behavior, active requirements, and durable project decisions. Remove
-  migration-era notes, deprecated-option explanations, old fallback paths, and historical caveats once they no longer
-  affect how someone uses, maintains, deploys, or releases the project. When a state change makes a requirement obsolete,
-  update the affected docs and configuration in that same change.
+- Use `../shared-automation/AGENTS.md` as the source of truth for README and Markdown documentation-style conventions.
 
 ## Auto Transition Timing
 
