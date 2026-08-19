@@ -1,5 +1,5 @@
 import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
-import { configureCanvas2D } from "svelte-lib/functions/canvas"
+import { configureCanvas2D, snapToDevicePixel } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
 const finalStrokeWidth = 0.3
@@ -35,22 +35,16 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
   return cellPixelIndexes[getCellIndex({ columnCount, x, y })]
 }
 
-function snapToDevicePixel(value, geometry) {
-  let overflow = geometry.overflow ?? 0
-  let pixelRatio = geometry.pixelRatio ?? 1
-
-  return Math.round((value + overflow) * pixelRatio) / pixelRatio - overflow
-}
-
 function getPixelDisplay(pixel, geometry) {
-  let x = snapToDevicePixel(pixel.x * geometry.cellWidth, geometry)
-  let y = snapToDevicePixel(pixel.y * geometry.cellHeight, geometry)
+  let snapOptions = { offset: geometry.overflow ?? 0, pixelRatio: geometry.pixelRatio ?? 1 }
+  let x = snapToDevicePixel(pixel.x * geometry.cellWidth, snapOptions)
+  let y = snapToDevicePixel(pixel.y * geometry.cellHeight, snapOptions)
 
   return {
     x,
     y,
-    width: snapToDevicePixel((pixel.x + 1) * geometry.cellWidth, geometry) - x,
-    height: snapToDevicePixel((pixel.y + 1) * geometry.cellHeight, geometry) - y,
+    width: snapToDevicePixel((pixel.x + 1) * geometry.cellWidth, snapOptions) - x,
+    height: snapToDevicePixel((pixel.y + 1) * geometry.cellHeight, snapOptions) - y,
     rotation: 0,
     translateX: 0,
     translateY: 0,
