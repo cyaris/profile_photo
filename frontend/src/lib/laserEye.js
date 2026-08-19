@@ -52,6 +52,7 @@ export function drawLaserEyeCanvas({ canvas, circles, height, overflow = 0, time
     context.clearRect(0, 0, width + overflow * 2, height + overflow * 2)
     context.save()
     context.translate(overflow, overflow)
+    context.fillStyle = laserEyeColor
     context.strokeStyle = laserEyeColor
 
     activeCircles.forEach(circle => {
@@ -59,8 +60,16 @@ export function drawLaserEyeCanvas({ canvas, circles, height, overflow = 0, time
       if (draw.strokeWidth <= 0 || draw.strokeOpacity <= 0) return
 
       context.globalAlpha = draw.strokeOpacity
-      context.lineWidth = draw.strokeWidth
       context.beginPath()
+
+      if (draw.radius * 2 <= draw.strokeWidth) {
+        context.arc(draw.cx, draw.cy, draw.radius + draw.strokeWidth / 2, 0, Math.PI * 2)
+        context.fill()
+
+        return
+      }
+
+      context.lineWidth = draw.strokeWidth
       context.arc(draw.cx, draw.cy, draw.radius, 0, Math.PI * 2)
       context.stroke()
     })

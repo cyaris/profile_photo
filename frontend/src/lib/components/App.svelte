@@ -89,6 +89,8 @@
 
   let displayWidth
   let displayHeight
+  let contentWrapper
+  let viewportWidth
   let pixelCanvas
   let laserEyeCanvas
   let pixelStates = createPixelStates(pixelRecords.length)
@@ -143,6 +145,8 @@
           height: displayHeight,
           cellWidth: displayWidth / pixelColumnCount,
           cellHeight: displayHeight / pixelRowCount,
+          columnCount: pixelColumnCount,
+          rowCount: pixelRowCount,
           overflow: Math.max(displayWidth, displayHeight) / 8
         }
       : undefined
@@ -160,6 +164,14 @@
   ].join(":")
   $: isProfileReady = pixelCanvas && laserEyeCanvas && geometry
   $: laserEyeOverflow = displayWidth ? displayWidth * laserEyeRadiusScale : 0
+  $: viewportGap = displayWidth ? getViewportGap(contentWrapper, viewportWidth) : 0
+
+  function getViewportGap(element, width) {
+    let bounds = element?.parentElement?.getBoundingClientRect()
+    if (!bounds || !width) return 0
+
+    return Math.max(0, Math.min(bounds.left, width - bounds.right))
+  }
 
   function renderPixels(timestamp) {
     if (!pixelCanvas || !geometry) return false
@@ -493,7 +505,14 @@
   })
 </script>
 
-<div class="mb-8 flex flex-col items-center">
+<svelte:window bind:innerWidth={viewportWidth} />
+
+<div
+  class="mb-8 flex flex-col items-center overflow-x-clip"
+  bind:this={contentWrapper}
+  style:margin-inline="{-viewportGap}px"
+  style:padding-inline="{viewportGap}px"
+>
   <div
     class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
@@ -521,7 +540,7 @@
       style:top="{-laserEyeOverflow}px"
       style:width="{displayWidth + laserEyeOverflow * 2}px"
       style:height="{displayHeight + laserEyeOverflow * 2}px"
-      style:z-index={70}
+      style:z-index={60}
       aria-hidden="true"
     ></canvas>
     <canvas
@@ -531,7 +550,7 @@
       style:top="{-canvasOverflow}px"
       style:width="{canvasWidth}px"
       style:height="{canvasHeight}px"
-      style:z-index={60}
+      style:z-index={70}
       aria-hidden="true"
     ></canvas>
   </div>

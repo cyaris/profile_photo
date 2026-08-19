@@ -2,8 +2,8 @@ import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
-const finalStrokeCellRatio = 0.032
-const initialStrokeCellRatio = 0.008
+const finalStrokeWidth = 0.3
+const separatorAlpha = 0.31
 const timingTolerance = 0.001
 const transitionHiddenHoldDuration = 300
 
@@ -35,21 +35,26 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
   return cellPixelIndexes[getCellIndex({ columnCount, x, y })]
 }
 
-function getStrokeWidth(cellRatio, geometry) {
-  return cellRatio * geometry.cellWidth
+function snapToDevicePixel(value, geometry) {
+  let overflow = geometry.overflow ?? 0
+  let pixelRatio = geometry.pixelRatio ?? 1
+
+  return Math.round((value + overflow) * pixelRatio) / pixelRatio - overflow
 }
 
 function getPixelDisplay(pixel, geometry) {
+  let x = snapToDevicePixel(pixel.x * geometry.cellWidth, geometry)
+  let y = snapToDevicePixel(pixel.y * geometry.cellHeight, geometry)
+
   return {
-    x: pixel.x * geometry.cellWidth,
-    y: pixel.y * geometry.cellHeight,
-    width: geometry.cellWidth,
-    height: geometry.cellHeight,
+    x,
+    y,
+    width: snapToDevicePixel((pixel.x + 1) * geometry.cellWidth, geometry) - x,
+    height: snapToDevicePixel((pixel.y + 1) * geometry.cellHeight, geometry) - y,
     rotation: 0,
     translateX: 0,
     translateY: 0,
-    opacity: 1,
-    strokeWidth: getStrokeWidth(initialStrokeCellRatio, geometry)
+    opacity: 1
   }
 }
 
@@ -74,7 +79,7 @@ function getActivatedPixelDisplay(pixel, geometry) {
     translateX: rotationTranslation.x,
     translateY: rotationTranslation.y,
     opacity: 0,
-    strokeWidth: getStrokeWidth(finalStrokeCellRatio, geometry)
+    strokeWidth: finalStrokeWidth
   }
 }
 
@@ -111,7 +116,7 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
     opacity: 1 - fadeProgress,
-    strokeWidth: getStrokeWidth(finalStrokeCellRatio, geometry)
+    strokeWidth: finalStrokeWidth
   }
 }
 
@@ -120,13 +125,6 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
   let activated = getActivatedPixelDisplay(pixel, geometry)
   let reverseProgress = getEasedProgress({
     delay: transitionDeactivateDelay,
-    duration: transitionDuration,
-    ease: easeCubicInOut,
-    now: timestamp,
-    start: state.deactivationStart
-  })
-  let strokeProgress = getEasedProgress({
-    delay: transitionDeactivateDelay + transitionDuration,
     duration: transitionDuration,
     ease: easeCubicInOut,
     now: timestamp,
@@ -143,10 +141,7 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
     opacity: reverseProgress,
-    strokeWidth: getStrokeWidth(
-      finalStrokeCellRatio + (initialStrokeCellRatio - finalStrokeCellRatio) * strokeProgress,
-      geometry
-    )
+    strokeWidth: finalStrokeWidth
   }
 }
 
@@ -178,16 +173,10 @@ function fillPixel(context, pixel, renderState) {
 }
 
 function strokePixel(context, renderState) {
-  if (renderState.opacity <= 0) return
+  if (renderState.opacity <= 0 || !renderState.rotation) return
 
   context.globalAlpha = renderState.opacity
   context.lineWidth = renderState.strokeWidth
-
-  if (!renderState.rotation) {
-    context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
-
-    return
-  }
 
   context.save()
   context.translate(renderState.translateX, renderState.translateY)
@@ -390,16 +379,83 @@ export function advanceAutoTransitionPath({ path, now, setDelay = transitionDura
   return true
 }
 
+function drawPixelSeparators(context, pixelRenderStates, geometry) {
+  let { cellHeight, cellWidth, columnCount, rowCount } = geometry
+  let overflow = geometry.overflow ?? 0
+  let pixelRatio = geometry.pixelRatio ?? 1
+  let opacities = new Float64Array(columnCount * rowCount)
+
+  pixelRenderStates.forEach(({ pixel, renderState }) => {
+    if (!renderState.rotation) opacities[pixel.y * columnCount + pixel.x] = renderState.opacity
+  })
+
+  let opacityAt = (column, row) =>
+    column < 0 || row < 0 || column >= columnCount || row >= rowCount ? 0 : opacities[row * columnCount + column]
+  let devicePosition = (index, cellSize) => Math.round((index * cellSize + overflow) * pixelRatio)
+
+  context.save()
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.fillStyle = "white"
+
+  let drawRuns = (lineCount, segmentCount, alphaAt, drawRun) => {
+    for (let line = 0; line <= lineCount; line++) {
+      let runStart = 0
+      let runAlpha = 0
+
+      for (let segment = 0; segment <= segmentCount; segment++) {
+        let alpha = segment < segmentCount ? alphaAt(line, segment) : -1
+        if (alpha == runAlpha) continue
+
+        if (runAlpha > 0) {
+          context.globalAlpha = runAlpha * separatorAlpha
+          drawRun(line, runStart, segment)
+        }
+
+        runStart = segment
+        runAlpha = alpha
+      }
+    }
+  }
+
+  drawRuns(
+    columnCount,
+    rowCount,
+    (column, row) => Math.max(opacityAt(column - 1, row), opacityAt(column, row)),
+    (column, from, to) =>
+      context.fillRect(
+        devicePosition(column, cellWidth),
+        devicePosition(from, cellHeight),
+        1,
+        devicePosition(to, cellHeight) - devicePosition(from, cellHeight)
+      )
+  )
+  drawRuns(
+    rowCount,
+    columnCount,
+    (row, column) => Math.max(opacityAt(column, row - 1), opacityAt(column, row)),
+    (row, from, to) =>
+      context.fillRect(
+        devicePosition(from, cellWidth),
+        devicePosition(row, cellHeight),
+        devicePosition(to, cellWidth) - devicePosition(from, cellWidth),
+        1
+      )
+  )
+
+  context.restore()
+}
+
 export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
   let overflow = geometry.overflow ?? 0
   let canvasHeight = geometry.height + overflow * 2
   let canvasWidth = geometry.width + overflow * 2
-  let { context } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
+  let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
+  let renderGeometry = { ...geometry, pixelRatio }
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
-    renderState: getPixelRenderState(pixel, states[pixel.index], geometry, timestamp)
+    renderState: getPixelRenderState(pixel, states[pixel.index], renderGeometry, timestamp)
   }))
 
   context.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -407,6 +463,7 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   context.translate(overflow, overflow)
   context.strokeStyle = "white"
   pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
+  drawPixelSeparators(context, pixelRenderStates, renderGeometry)
   pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
   context.restore()
 

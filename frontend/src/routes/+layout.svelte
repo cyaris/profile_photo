@@ -7,9 +7,3 @@
 </script>
 
 <slot />
-
-<style>
-  :global(html) {
-    overflow-x: clip;
-  }
-</style>
