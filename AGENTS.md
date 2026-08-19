@@ -14,6 +14,22 @@
   keep the fully visible rest interval after a pixel is restored equal to its fully hidden interval. Do not change the
   pixel movement or fade durations to achieve that timing; treat those transition speeds as fixed.
 
+## Pixel Grid Rendering
+
+- Pixel-grid separators are drawn once per boundary in `drawPixelSeparators`, not as a per-pixel `strokeRect`. Each
+  boundary's alpha comes from the more-visible of its two neighboring cells, and its geometry is snapped to the device
+  pixel grid via `snapToDevicePixel`, so a boundary stays a uniform 1-device-pixel line regardless of screen density
+  and regardless of which side is still visible during a transition. Do not reintroduce a per-pixel stroke on
+  `getPixelDisplay`/`getActivatedPixelDisplay`/etc.; that both doubles interior line weight against the outer border
+  (each interior boundary gets stroked by both neighbors) and reintroduces sub-device-pixel strokes, which render
+  unevenly on Safari.
+- `separatorAlpha` (0.31) is not an arbitrary tuned value: it reproduces the weight the original 0.075 CSS-pixel
+  hairline (carried over from the 2023 SVG version) rendered at on a 2x-density display. Keep desktop and mobile
+  identical when changing it; do not vary it by pixel ratio or portrait size.
+- Laser-eye circles start below their own stroke width by design (a solid dot that opens into a ring as it expands).
+  This relies on `strokeOrFillCircle` filling the circle whenever its diameter is within its stroke width; do not
+  replace that call with a plain `stroke()`, which renders a hollow ring while the circle is still small.
+
 ## GitHub Actions
 
 - Use `../shared-automation/AGENTS.md` as the source of truth for shared GitHub Actions, reusable workflow wrapper,
