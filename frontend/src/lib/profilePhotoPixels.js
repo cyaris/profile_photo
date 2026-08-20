@@ -92,11 +92,7 @@ function getActivatingProgress(state, timestamp) {
   }
 }
 
-function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
-  let normal = getPixelDisplay(pixel, geometry)
-  let activated = getActivatedPixelDisplay(pixel, geometry)
-  let { moveProgress, fadeProgress } = getActivatingProgress(state, timestamp)
-
+function getTransitioningPixelDisplay(normal, activated, moveProgress, opacity) {
   return {
     x: normal.x + (activated.x - normal.x) * moveProgress,
     y: normal.y + (activated.y - normal.y) * moveProgress,
@@ -105,9 +101,17 @@ function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
     rotation: finalRotation * moveProgress,
     translateX: activated.translateX * moveProgress,
     translateY: activated.translateY * moveProgress,
-    opacity: 1 - fadeProgress,
+    opacity,
     strokeWidth: finalStrokeWidth
   }
+}
+
+function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
+  let normal = getPixelDisplay(pixel, geometry)
+  let activated = getActivatedPixelDisplay(pixel, geometry)
+  let { moveProgress, fadeProgress } = getActivatingProgress(state, timestamp)
+
+  return getTransitioningPixelDisplay(normal, activated, moveProgress, 1 - fadeProgress)
 }
 
 function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
@@ -122,17 +126,7 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
   })
   let moveProgress = 1 - reverseProgress
 
-  return {
-    x: normal.x + (activated.x - normal.x) * moveProgress,
-    y: normal.y + (activated.y - normal.y) * moveProgress,
-    width: normal.width + (activated.width - normal.width) * moveProgress,
-    height: normal.height + (activated.height - normal.height) * moveProgress,
-    rotation: finalRotation * moveProgress,
-    translateX: activated.translateX * moveProgress,
-    translateY: activated.translateY * moveProgress,
-    opacity: reverseProgress,
-    strokeWidth: finalStrokeWidth
-  }
+  return getTransitioningPixelDisplay(normal, activated, moveProgress, reverseProgress)
 }
 
 function getPixelRenderState(pixel, state, geometry, timestamp) {
@@ -484,10 +478,9 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   if (!context) return false
 
   geometry.pixelRatio = pixelRatio
-  let renderGeometry = geometry
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
-    renderState: getPixelRenderState(pixel, states[pixel.index], renderGeometry, timestamp)
+    renderState: getPixelRenderState(pixel, states[pixel.index], geometry, timestamp)
   }))
 
   context.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -495,7 +488,7 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   context.translate(overflow, overflow)
   context.strokeStyle = "white"
   pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
-  drawPixelSeparators(context, pixelRenderStates, renderGeometry)
+  drawPixelSeparators(context, pixelRenderStates, geometry)
   pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
   context.restore()
 
