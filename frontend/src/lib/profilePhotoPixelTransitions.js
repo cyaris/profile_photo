@@ -1,5 +1,5 @@
+import { easeCubicInOut } from "d3-ease"
 import { getEasedProgress } from "svelte-lib/functions/canvas"
-import { easeCubicInOut } from "svelte-lib/functions/easing"
 
 const finalRotation = Math.PI / 4
 const finalStrokeWidth = 0.3
