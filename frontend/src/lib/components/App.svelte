@@ -3,27 +3,28 @@
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
-  import { createAnimationLoop } from "svelte-lib/functions"
-  import { getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { createAnimationLoop, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
+  import { drawPixelCanvas } from "../profilePhotoPixelCanvas.js"
   import {
-    activatePixelIndexes,
     advanceAutoTransitionPath,
     createAutoTransitionDiagonalPaths,
     createAutoTransitionFramePaths,
     createPixelModel,
-    createPixelStates,
     createRevealFlags,
     createTransitionNeighborhoods,
-    deactivatePixelIndexes,
-    drawPixelCanvas,
-    getAutoTransitionPixelHiddenDuration,
     getGridLinePixelIndexes,
     getPixelIndexFromPoint,
-    getPixelNeighborhood,
-    transitionReuseDuration
+    getPixelNeighborhood
   } from "../profilePhotoPixels.js"
+  import {
+    activatePixelIndexes,
+    createPixelStates,
+    deactivatePixelIndexes,
+    getAutoTransitionPixelHiddenDuration,
+    transitionReuseDuration
+  } from "../profilePhotoPixelTransitions.js"
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
 
@@ -256,19 +257,18 @@
 
     let nextIndexSet = new Set(getPointerPathIndexes(pixelIndex).flatMap(getPixelNeighborhoodIndexes))
 
-    deactivatePixelIndexes({
-      indexes: [...activePointerNeighborhoodIndexes].filter(index => !nextIndexSet.has(index)),
-      isTransitionMode,
-      now: performance.now(),
-      states: pixelStates
-    })
-    activatePixelIndexes({
-      indexes: [...nextIndexSet].filter(index => !activePointerNeighborhoodIndexes.has(index)),
-      isTransitionMode,
-      now: performance.now(),
-      onRevealPixel: revealPixel,
-      states: pixelStates
-    })
+    let now = performance.now()
+
+    if (isTransitionMode) {
+      deactivatePixelIndexes({
+        indexes: [...activePointerNeighborhoodIndexes].filter(index => !nextIndexSet.has(index)),
+        now,
+        states: pixelStates
+      })
+    }
+
+    let activatedIndexes = activatePixelIndexes({ indexes: [...nextIndexSet], now, states: pixelStates })
+    if (!isTransitionMode) activatedIndexes.forEach(revealPixel)
 
     activePointerNeighborhoodIndexes = nextIndexSet
     activePointerPixelIndex = pixelIndex
@@ -304,12 +304,13 @@
   }
 
   function releaseActivePointer() {
-    deactivatePixelIndexes({
-      indexes: [...activePointerNeighborhoodIndexes],
-      isTransitionMode,
-      now: performance.now(),
-      states: pixelStates
-    })
+    if (isTransitionMode) {
+      deactivatePixelIndexes({
+        indexes: [...activePointerNeighborhoodIndexes],
+        now: performance.now(),
+        states: pixelStates
+      })
+    }
     scheduleRender()
 
     if (activePointerId !== undefined && activePointerTarget?.hasPointerCapture?.(activePointerId)) {

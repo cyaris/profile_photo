@@ -1,25 +1,12 @@
-import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
-import { configureCanvas2D } from "svelte-lib/functions/canvas"
+import {
+  activatePixelIndexes,
+  arePixelIndexesIdle,
+  deactivatePixelIndexes,
+  releaseReusablePixelIndexes,
+  transitionDuration
+} from "./profilePhotoPixelTransitions.js"
 
-const finalRotation = Math.PI / 4
-const finalStrokeWidth = 0.3
-const separatorAlpha = 0.31
 const timingTolerance = 0.001
-const transitionHiddenHoldDuration = 300
-
-export const transitionDelay = 100
-export const transitionDuration = 750
-
-const transitionFadeDelay = transitionDelay + transitionDuration + transitionDelay
-const transitionTotalDuration = transitionFadeDelay + transitionDuration
-const transitionDeactivateDelay = transitionTotalDuration + transitionHiddenHoldDuration
-export const transitionReuseDuration = transitionDeactivateDelay + transitionDuration * 2
-
-const pixelPhase = { idle: 0, activating: 1, hidden: 2, deactivating: 3 }
-
-export function getAutoTransitionPixelHiddenDuration(stepInterval) {
-  return transitionHiddenHoldDuration + stepInterval
-}
 
 function getTransitionRegionWidth(radius) {
   return Math.max(Math.floor(radius), 0) * 2 + 1
@@ -33,173 +20,6 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
   if (x < 0 || y < 0 || x >= columnCount || y >= rowCount) return -1
 
   return cellPixelIndexes[getCellIndex({ columnCount, x, y })]
-}
-
-function getPixelDisplay(pixel, geometry) {
-  return {
-    x: pixel.x * geometry.cellWidth,
-    y: pixel.y * geometry.cellHeight,
-    width: geometry.cellWidth,
-    height: geometry.cellHeight,
-    rotation: 0,
-    translateX: 0,
-    translateY: 0,
-    opacity: 1
-  }
-}
-
-function getRotationTranslation(anchorX, anchorY, angle) {
-  let cos = Math.cos(angle)
-  let sin = Math.sin(angle)
-
-  return { x: anchorX * (1 - cos) + anchorY * sin, y: anchorY * (1 - cos) - anchorX * sin }
-}
-
-function getActivatedPixelDisplay(pixel, geometry) {
-  let normal = getPixelDisplay(pixel, geometry)
-  let rotationTranslation = getRotationTranslation(normal.x, normal.y, finalRotation)
-
-  return {
-    ...normal,
-    x: normal.x + geometry.cellWidth / 2 - 1.5,
-    y: normal.y - geometry.cellHeight / 2,
-    width: geometry.cellWidth / 1.5,
-    height: geometry.cellHeight / 1.5,
-    rotation: finalRotation,
-    translateX: rotationTranslation.x,
-    translateY: rotationTranslation.y,
-    opacity: 0,
-    strokeWidth: finalStrokeWidth
-  }
-}
-
-function getActivatingProgress(state, timestamp) {
-  return {
-    moveProgress: getEasedProgress({
-      delay: transitionDelay,
-      duration: transitionDuration,
-      ease: easeCubicInOut,
-      now: timestamp,
-      start: state.activationStart
-    }),
-    fadeProgress: getEasedProgress({
-      delay: transitionFadeDelay,
-      duration: transitionDuration,
-      ease: easeCubicInOut,
-      now: timestamp,
-      start: state.activationStart
-    })
-  }
-}
-
-function getTransitioningPixelDisplay(normal, activated, moveProgress, opacity) {
-  return {
-    x: normal.x + (activated.x - normal.x) * moveProgress,
-    y: normal.y + (activated.y - normal.y) * moveProgress,
-    width: normal.width + (activated.width - normal.width) * moveProgress,
-    height: normal.height + (activated.height - normal.height) * moveProgress,
-    rotation: finalRotation * moveProgress,
-    translateX: activated.translateX * moveProgress,
-    translateY: activated.translateY * moveProgress,
-    opacity,
-    strokeWidth: finalStrokeWidth
-  }
-}
-
-function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
-  let normal = getPixelDisplay(pixel, geometry)
-  let activated = getActivatedPixelDisplay(pixel, geometry)
-  let { moveProgress, fadeProgress } = getActivatingProgress(state, timestamp)
-
-  return getTransitioningPixelDisplay(normal, activated, moveProgress, 1 - fadeProgress)
-}
-
-function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
-  let normal = getPixelDisplay(pixel, geometry)
-  let activated = getActivatedPixelDisplay(pixel, geometry)
-  let reverseProgress = getEasedProgress({
-    delay: transitionDeactivateDelay,
-    duration: transitionDuration,
-    ease: easeCubicInOut,
-    now: timestamp,
-    start: state.deactivationStart
-  })
-  let moveProgress = 1 - reverseProgress
-
-  return getTransitioningPixelDisplay(normal, activated, moveProgress, reverseProgress)
-}
-
-function getPixelRenderState(pixel, state, geometry, timestamp) {
-  if (state.phase == pixelPhase.activating) return getActivatingPixelDisplay(pixel, state, geometry, timestamp)
-  if (state.phase == pixelPhase.hidden) return getActivatedPixelDisplay(pixel, geometry)
-  if (state.phase == pixelPhase.deactivating) return getDeactivatingPixelDisplay(pixel, state, geometry, timestamp)
-
-  return getPixelDisplay(pixel, geometry)
-}
-
-function fillPixel(context, pixel, renderState) {
-  if (renderState.opacity <= 0) return
-
-  context.globalAlpha = renderState.opacity
-  context.fillStyle = pixel.rgb
-
-  if (!renderState.rotation) {
-    context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
-
-    return
-  }
-
-  context.save()
-  context.translate(renderState.translateX, renderState.translateY)
-  context.rotate(renderState.rotation)
-  context.fillRect(renderState.x, renderState.y, renderState.width, renderState.height)
-  context.restore()
-}
-
-function strokePixel(context, renderState) {
-  if (renderState.opacity <= 0 || !renderState.rotation) return
-
-  context.globalAlpha = renderState.opacity
-  context.lineWidth = renderState.strokeWidth
-
-  context.save()
-  context.translate(renderState.translateX, renderState.translateY)
-  context.rotate(renderState.rotation)
-  context.strokeRect(renderState.x, renderState.y, renderState.width, renderState.height)
-  context.restore()
-}
-
-function compactFinishedStates(states, timestamp) {
-  let hasAnimatingPixels = false
-
-  states.forEach(state => {
-    if (state.phase == pixelPhase.activating && timestamp - state.activationStart >= transitionTotalDuration) {
-      state.phase = pixelPhase.hidden
-    }
-
-    if (
-      (state.phase == pixelPhase.activating || state.phase == pixelPhase.hidden) &&
-      state.deactivationStart &&
-      timestamp - state.deactivationStart >= transitionDeactivateDelay
-    ) {
-      state.phase = pixelPhase.deactivating
-    }
-
-    if (
-      state.phase == pixelPhase.deactivating &&
-      timestamp - state.deactivationStart >= transitionDeactivateDelay + transitionDuration * 2
-    ) {
-      state.phase = pixelPhase.idle
-      state.activationStart = 0
-      state.deactivationStart = 0
-    }
-
-    if (state.phase == pixelPhase.activating || state.phase == pixelPhase.deactivating || state.deactivationStart) {
-      hasAnimatingPixels = true
-    }
-  })
-
-  return hasAnimatingPixels
 }
 
 function createPixelRecord(pixel, index) {
@@ -218,40 +38,8 @@ export function createPixelModel(sourcePixels) {
   return { cellPixelIndexes, columnCount, pixelRecords, rowCount }
 }
 
-export function createPixelStates(pixelCount) {
-  return Array.from({ length: pixelCount }, () => ({
-    phase: pixelPhase.idle,
-    activationStart: 0,
-    deactivationStart: 0
-  }))
-}
-
 export function createRevealFlags(pixelCount) {
   return new Uint8Array(pixelCount)
-}
-
-function arePixelIndexesIdle({ indexes, states }) {
-  return indexes.every(index => states[index].phase == pixelPhase.idle)
-}
-
-function getPixelIdleTime(state) {
-  if (state.phase == pixelPhase.idle) return 0
-
-  return state.deactivationStart
-    ? state.deactivationStart + transitionDeactivateDelay + transitionDuration * 2
-    : Infinity
-}
-
-function releaseReusablePixelIndexes({ indexes, now, states }) {
-  indexes.forEach(index => {
-    let state = states[index]
-
-    if (getPixelIdleTime(state) <= now + timingTolerance) {
-      state.phase = pixelPhase.idle
-      state.activationStart = 0
-      state.deactivationStart = 0
-    }
-  })
 }
 
 export function createTransitionNeighborhoods({ cellPixelIndexes, columnCount, rowCount, radius }) {
@@ -302,42 +90,13 @@ export function getPixelNeighborhood({ neighborhoods, pixel, columnCount }) {
   return neighborhoods[getCellIndex({ columnCount, x: pixel.x, y: pixel.y })] ?? []
 }
 
-export function activatePixelIndexes({ indexes, isTransitionMode, now, onRevealPixel, states }) {
-  let activatedIndexes = []
-
-  indexes.forEach(index => {
-    let state = states[index]
-    if (state.phase != pixelPhase.idle) return
-
-    state.phase = pixelPhase.activating
-    state.activationStart = now
-    state.deactivationStart = 0
-    activatedIndexes.push(index)
-
-    if (!isTransitionMode) onRevealPixel?.(index)
-  })
-
-  return activatedIndexes
-}
-
-export function deactivatePixelIndexes({ indexes, isTransitionMode, now, states }) {
-  if (!isTransitionMode) return
-
-  indexes.forEach(index => {
-    let state = states[index]
-    if (state.phase == pixelPhase.idle || state.phase == pixelPhase.deactivating || state.deactivationStart) return
-
-    state.deactivationStart = now
-  })
-}
-
 export function advanceAutoTransitionPath({ path, now, setDelay = transitionDuration / 32, states }) {
   if (!path.slices.length) return false
 
   let sliceIndex = path.activeSliceIndex === undefined ? 0 : (path.activeSliceIndex + 1) % path.slices.length
   let sliceIndexes = path.slices[sliceIndex].indexes
 
-  deactivatePixelIndexes({ indexes: path.activeIndexes, isTransitionMode: true, now, states })
+  deactivatePixelIndexes({ indexes: path.activeIndexes, now, states })
   path.activeIndexes = []
 
   if (sliceIndex == 0 && path.activeSliceIndex !== undefined && path.nextCycleStart === undefined) {
@@ -354,145 +113,13 @@ export function advanceAutoTransitionPath({ path, now, setDelay = transitionDura
   if (!arePixelIndexesIdle({ indexes: sliceIndexes, states })) return false
 
   path.activeSliceIndex = sliceIndex
-  path.activeIndexes = activatePixelIndexes({ indexes: sliceIndexes, isTransitionMode: true, now, states })
+  path.activeIndexes = activatePixelIndexes({ indexes: sliceIndexes, now, states })
 
   if (sliceIndex == path.slices.length - 1) {
     path.setCompletedAt = now
   }
 
   return true
-}
-
-function getSeparatorBuffers(geometry) {
-  let { cellHeight, cellWidth, columnCount, overflow, pixelRatio, rowCount } = geometry
-  let buffers = geometry._separatorBuffers
-
-  if (
-    buffers &&
-    buffers.columnCount == columnCount &&
-    buffers.rowCount == rowCount &&
-    buffers.cellWidth == cellWidth &&
-    buffers.cellHeight == cellHeight &&
-    buffers.overflow == overflow &&
-    buffers.pixelRatio == pixelRatio
-  ) {
-    buffers.opacities.fill(0)
-
-    return buffers
-  }
-
-  let columnPositions = new Float64Array(columnCount + 1)
-  let rowPositions = new Float64Array(rowCount + 1)
-
-  for (let i = 0; i <= columnCount; i++) columnPositions[i] = Math.round((i * cellWidth + overflow) * pixelRatio)
-  for (let i = 0; i <= rowCount; i++) rowPositions[i] = Math.round((i * cellHeight + overflow) * pixelRatio)
-
-  buffers = {
-    cellWidth,
-    cellHeight,
-    columnCount,
-    columnPositions,
-    opacities: new Float64Array(columnCount * rowCount),
-    overflow,
-    pixelRatio,
-    rowCount,
-    rowPositions
-  }
-  geometry._separatorBuffers = buffers
-
-  return buffers
-}
-
-function drawPixelSeparators(context, pixelRenderStates, geometry) {
-  let { columnCount, columnPositions, opacities, rowCount, rowPositions } = getSeparatorBuffers(geometry)
-
-  for (let i = 0; i < pixelRenderStates.length; i++) {
-    let { pixel, renderState } = pixelRenderStates[i]
-    if (!renderState.rotation) opacities[pixel.y * columnCount + pixel.x] = renderState.opacity
-  }
-
-  context.save()
-  context.setTransform(1, 0, 0, 1, 0, 0)
-  context.fillStyle = "white"
-
-  for (let column = 0; column <= columnCount; column++) {
-    let x = columnPositions[column]
-    let runStart = 0
-    let runAlpha = 0
-
-    for (let row = 0; row <= rowCount; row++) {
-      let alpha = 0
-
-      if (row < rowCount) {
-        let left = column > 0 ? opacities[row * columnCount + column - 1] : 0
-        let right = column < columnCount ? opacities[row * columnCount + column] : 0
-        alpha = left > right ? left : right
-      }
-
-      if (alpha == runAlpha) continue
-
-      if (runAlpha > 0) {
-        context.globalAlpha = runAlpha * separatorAlpha
-        context.fillRect(x, rowPositions[runStart], 1, rowPositions[row] - rowPositions[runStart])
-      }
-
-      runStart = row
-      runAlpha = alpha
-    }
-  }
-
-  for (let row = 0; row <= rowCount; row++) {
-    let y = rowPositions[row]
-    let runStart = 0
-    let runAlpha = 0
-
-    for (let column = 0; column <= columnCount; column++) {
-      let alpha = 0
-
-      if (column < columnCount) {
-        let top = row > 0 ? opacities[(row - 1) * columnCount + column] : 0
-        let bottom = row < rowCount ? opacities[row * columnCount + column] : 0
-        alpha = top > bottom ? top : bottom
-      }
-
-      if (alpha == runAlpha) continue
-
-      if (runAlpha > 0) {
-        context.globalAlpha = runAlpha * separatorAlpha
-        context.fillRect(columnPositions[runStart], y, columnPositions[column] - columnPositions[runStart], 1)
-      }
-
-      runStart = column
-      runAlpha = alpha
-    }
-  }
-
-  context.restore()
-}
-
-export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
-  let overflow = geometry.overflow ?? 0
-  let canvasHeight = geometry.height + overflow * 2
-  let canvasWidth = geometry.width + overflow * 2
-  let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
-  if (!context) return false
-
-  geometry.pixelRatio = pixelRatio
-  let pixelRenderStates = pixels.map(pixel => ({
-    pixel,
-    renderState: getPixelRenderState(pixel, states[pixel.index], geometry, timestamp)
-  }))
-
-  context.clearRect(0, 0, canvasWidth, canvasHeight)
-  context.save()
-  context.translate(overflow, overflow)
-  context.strokeStyle = "white"
-  pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
-  drawPixelSeparators(context, pixelRenderStates, geometry)
-  pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
-  context.restore()
-
-  return compactFinishedStates(states, timestamp)
 }
 
 function createSlice(points, grid) {
