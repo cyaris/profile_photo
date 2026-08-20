@@ -1,5 +1,5 @@
 import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
-import { configureCanvas2D, snapToDevicePixel } from "svelte-lib/functions/canvas"
+import { configureCanvas2D } from "svelte-lib/functions/canvas"
 
 const finalRotation = Math.PI / 4
 const finalStrokeWidth = 0.3
@@ -36,15 +36,11 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
 }
 
 function getPixelDisplay(pixel, geometry) {
-  let snapOptions = { offset: geometry.overflow ?? 0, pixelRatio: geometry.pixelRatio ?? 1 }
-  let x = snapToDevicePixel(pixel.x * geometry.cellWidth, snapOptions)
-  let y = snapToDevicePixel(pixel.y * geometry.cellHeight, snapOptions)
-
   return {
-    x,
-    y,
-    width: snapToDevicePixel((pixel.x + 1) * geometry.cellWidth, snapOptions) - x,
-    height: snapToDevicePixel((pixel.y + 1) * geometry.cellHeight, snapOptions) - y,
+    x: pixel.x * geometry.cellWidth,
+    y: pixel.y * geometry.cellHeight,
+    width: geometry.cellWidth,
+    height: geometry.cellHeight,
     rotation: 0,
     translateX: 0,
     translateY: 0,
@@ -373,68 +369,109 @@ export function advanceAutoTransitionPath({ path, now, setDelay = transitionDura
   return true
 }
 
+function getSeparatorBuffers(geometry) {
+  let { cellHeight, cellWidth, columnCount, overflow, pixelRatio, rowCount } = geometry
+  let buffers = geometry._separatorBuffers
+
+  if (
+    buffers &&
+    buffers.columnCount == columnCount &&
+    buffers.rowCount == rowCount &&
+    buffers.cellWidth == cellWidth &&
+    buffers.cellHeight == cellHeight &&
+    buffers.overflow == overflow &&
+    buffers.pixelRatio == pixelRatio
+  ) {
+    buffers.opacities.fill(0)
+
+    return buffers
+  }
+
+  let columnPositions = new Float64Array(columnCount + 1)
+  let rowPositions = new Float64Array(rowCount + 1)
+
+  for (let i = 0; i <= columnCount; i++) columnPositions[i] = Math.round((i * cellWidth + overflow) * pixelRatio)
+  for (let i = 0; i <= rowCount; i++) rowPositions[i] = Math.round((i * cellHeight + overflow) * pixelRatio)
+
+  buffers = {
+    cellWidth,
+    cellHeight,
+    columnCount,
+    columnPositions,
+    opacities: new Float64Array(columnCount * rowCount),
+    overflow,
+    pixelRatio,
+    rowCount,
+    rowPositions
+  }
+  geometry._separatorBuffers = buffers
+
+  return buffers
+}
+
 function drawPixelSeparators(context, pixelRenderStates, geometry) {
-  let { cellHeight, cellWidth, columnCount, rowCount } = geometry
-  let overflow = geometry.overflow ?? 0
-  let pixelRatio = geometry.pixelRatio ?? 1
-  let opacities = new Float64Array(columnCount * rowCount)
+  let { columnCount, columnPositions, opacities, rowCount, rowPositions } = getSeparatorBuffers(geometry)
 
-  pixelRenderStates.forEach(({ pixel, renderState }) => {
+  for (let i = 0; i < pixelRenderStates.length; i++) {
+    let { pixel, renderState } = pixelRenderStates[i]
     if (!renderState.rotation) opacities[pixel.y * columnCount + pixel.x] = renderState.opacity
-  })
-
-  let opacityAt = (column, row) =>
-    column < 0 || row < 0 || column >= columnCount || row >= rowCount ? 0 : opacities[row * columnCount + column]
-  let devicePosition = (index, cellSize) => Math.round((index * cellSize + overflow) * pixelRatio)
+  }
 
   context.save()
   context.setTransform(1, 0, 0, 1, 0, 0)
   context.fillStyle = "white"
 
-  let drawRuns = (lineCount, segmentCount, alphaAt, drawRun) => {
-    for (let line = 0; line <= lineCount; line++) {
-      let runStart = 0
-      let runAlpha = 0
+  for (let column = 0; column <= columnCount; column++) {
+    let x = columnPositions[column]
+    let runStart = 0
+    let runAlpha = 0
 
-      for (let segment = 0; segment <= segmentCount; segment++) {
-        let alpha = segment < segmentCount ? alphaAt(line, segment) : -1
-        if (alpha == runAlpha) continue
+    for (let row = 0; row <= rowCount; row++) {
+      let alpha = 0
 
-        if (runAlpha > 0) {
-          context.globalAlpha = runAlpha * separatorAlpha
-          drawRun(line, runStart, segment)
-        }
-
-        runStart = segment
-        runAlpha = alpha
+      if (row < rowCount) {
+        let left = column > 0 ? opacities[row * columnCount + column - 1] : 0
+        let right = column < columnCount ? opacities[row * columnCount + column] : 0
+        alpha = left > right ? left : right
       }
+
+      if (alpha == runAlpha) continue
+
+      if (runAlpha > 0) {
+        context.globalAlpha = runAlpha * separatorAlpha
+        context.fillRect(x, rowPositions[runStart], 1, rowPositions[row] - rowPositions[runStart])
+      }
+
+      runStart = row
+      runAlpha = alpha
     }
   }
 
-  drawRuns(
-    columnCount,
-    rowCount,
-    (column, row) => Math.max(opacityAt(column - 1, row), opacityAt(column, row)),
-    (column, from, to) =>
-      context.fillRect(
-        devicePosition(column, cellWidth),
-        devicePosition(from, cellHeight),
-        1,
-        devicePosition(to, cellHeight) - devicePosition(from, cellHeight)
-      )
-  )
-  drawRuns(
-    rowCount,
-    columnCount,
-    (row, column) => Math.max(opacityAt(column, row - 1), opacityAt(column, row)),
-    (row, from, to) =>
-      context.fillRect(
-        devicePosition(from, cellWidth),
-        devicePosition(row, cellHeight),
-        devicePosition(to, cellWidth) - devicePosition(from, cellWidth),
-        1
-      )
-  )
+  for (let row = 0; row <= rowCount; row++) {
+    let y = rowPositions[row]
+    let runStart = 0
+    let runAlpha = 0
+
+    for (let column = 0; column <= columnCount; column++) {
+      let alpha = 0
+
+      if (column < columnCount) {
+        let top = row > 0 ? opacities[(row - 1) * columnCount + column] : 0
+        let bottom = row < rowCount ? opacities[row * columnCount + column] : 0
+        alpha = top > bottom ? top : bottom
+      }
+
+      if (alpha == runAlpha) continue
+
+      if (runAlpha > 0) {
+        context.globalAlpha = runAlpha * separatorAlpha
+        context.fillRect(columnPositions[runStart], y, columnPositions[column] - columnPositions[runStart], 1)
+      }
+
+      runStart = column
+      runAlpha = alpha
+    }
+  }
 
   context.restore()
 }
@@ -446,7 +483,8 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
-  let renderGeometry = { ...geometry, pixelRatio }
+  geometry.pixelRatio = pixelRatio
+  let renderGeometry = geometry
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
     renderState: getPixelRenderState(pixel, states[pixel.index], renderGeometry, timestamp)

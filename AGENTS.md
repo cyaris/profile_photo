@@ -17,9 +17,10 @@
 ## Pixel Grid Rendering
 
 - Pixel-grid separators are drawn once per boundary in `drawPixelSeparators`, not as a per-pixel `strokeRect`. Each
-  boundary's alpha comes from the more-visible of its two neighboring cells, and its geometry is snapped to the device
-  pixel grid via `snapToDevicePixel`, so a boundary stays a uniform 1-device-pixel line regardless of screen density
-  and regardless of which side is still visible during a transition. Do not reintroduce a per-pixel stroke on
+  boundary's alpha comes from the more-visible of its two neighboring cells, and its position comes from a
+  once-per-geometry `columnPositions`/`rowPositions` lookup table (built in `getSeparatorBuffers`, snapped to the
+  device pixel grid), so a boundary stays a uniform 1-device-pixel line regardless of screen density and regardless of
+  which side is still visible during a transition. Do not reintroduce a per-pixel stroke on
   `getPixelDisplay`/`getActivatedPixelDisplay`/etc.; that both doubles interior line weight against the outer border
   (each interior boundary gets stroked by both neighbors) and reintroduces sub-device-pixel strokes, which render
   unevenly on Safari.
