@@ -1,43 +1,34 @@
 # Repository Guidance
 
-## Documentation
+## Shared Conventions
 
-- Use `../shared-automation/AGENTS.md` as the source of truth for README and Markdown documentation-style conventions.
+- Inherit README and Markdown style, GitHub Actions, reusable workflow, pull-request review, workflow failure, commit,
+  and release-management rules from `../shared-automation/AGENTS.md`.
 
 ## Auto Transition Timing
 
-- Keep the full-set completion duration and the delay between sets independently configurable for both the Frames and
-  Diagonal Auto Transition modes. A Frames set completes one full perimeter, while a Diagonal set completes the full
-  photo; do not replace either timing control with a hard-coded or transition-lifecycle-derived cadence. Keep the
-  effective gap constant across completed sets. Treat the configured delay as a minimum and resolve a constant safety
-  floor when necessary so a new set never reaches pixels that are still transitioning. For the built-in Diagonal delay,
-  keep the fully visible rest interval after a pixel is restored equal to its fully hidden interval. Do not change the
-  pixel movement or fade durations to achieve that timing; treat those transition speeds as fixed.
+- Keep every Auto Transition mode's full-set completion duration and inter-set delay independently configurable. Define
+  what completes a set per mode—for example, one perimeter for Frames and the full photo for Diagonal—without deriving
+  cadence from transition lifecycle. Keep the effective gap constant across completed sets, treat the configured delay
+  as a minimum, and add a constant safety floor when needed so a new set cannot reach pixels still transitioning.
+- Keep mode-specific timing invariants local. The built-in Diagonal delay keeps a restored pixel fully visible for as
+  long as it remains fully hidden. Do not change pixel movement or fade durations to create the gap.
+- Keep `transitionReuseDuration`'s extra `transitionDuration` beyond full visual restoration. It reproduces the
+  pre-Canvas D3 rewrite's separate post-restore stroke-width settle transition before a pixel became reusable, and the
+  Diagonal delay default derives from it.
 
-## GitHub Actions
+## Pixel Grid Rendering
 
-- Use `../shared-automation/AGENTS.md` as the source of truth for shared GitHub Actions, reusable workflow wrapper,
-  release-policy, dispatch, and automation documentation conventions.
-- Before merging any pull request, explicitly inspect CodeRabbit comments and reviews and assess every still-applicable
-  finding; do not merge solely because checks are green.
-- Workflows must fail clearly when a requested feature requires credentials, secrets, repository variables, external
-  permissions, or paid services that are not configured. Apply this to dry-run modes too unless the feature is
-  explicitly documented as credential-optional.
-- Project-specific Rollup inputs include the S3 prefix, bundle file list, and the `fireworks` local dependency
-  spec. The shared Rollup workflow uses the latest `svelte-lib` and `fireworks` `main` commits by default and resolves
-  those branches to exact commit SHAs during each run.
-- Project release naming and milestone overrides belong in `.github/release-policy.yml`.
+- Draw each pixel-grid boundary once in `drawPixelSeparators`, not as a per-pixel `strokeRect`. Derive its alpha from
+  the more-visible neighboring cell and its position from device-pixel-snapped `columnPositions`/`rowPositions` lookup
+  tables built once per geometry in `getSeparatorBuffers`. Do not reintroduce per-pixel strokes in pixel display
+  functions; they double interior line weight and rasterize unevenly on Safari.
+- Keep `separatorAlpha` at `0.31` unless deliberately changing the cross-device design. It reproduces the original
+  `0.075` CSS-pixel SVG hairline at 2x density and must remain the same on desktop and mobile.
+- Laser-eye circles intentionally begin as solid dots and open into rings as they grow. Keep `strokeOrFillCircle` for
+  radii below half the stroke width; a plain `stroke()` creates an incorrect hollow ring.
 
-## Release Management
+## Rollup Delivery
 
-- While working in this repository, evaluate whether the accumulated changes represent a meaningful release milestone.
-- A release may be appropriate when the work includes a substantial user-facing feature, a major redesign or workflow change, a meaningful new integration, an important architecture change, a backward-incompatible change, a stable initial public version, a significant performance, reliability, security, accessibility, or compatibility improvement, or a coherent group of changes that materially changes how the project is used.
-- Do not recommend a release for routine maintenance, formatting, minor refactoring, isolated dependency updates, or small bug fixes unless their combined impact is significant.
-- Write clear, specific commit subjects that describe the actual change. Prefer plain language over release-tool syntax,
-  and do not exaggerate routine maintenance as user-facing work.
-- Treat upstream automation, shared workflow reference, dependency-pin, Renovate, release-policy, and local dependency ref
-  maintenance as non-release work unless it changes user-facing behavior, runtime behavior, or a published API.
-- When the current work appears to justify a release, state that a release may be warranted, explain the milestone in plain language, suggest a release title, suggest a tag consistent with this repository's existing convention, summarize release-note content, identify breaking changes or migration concerns, and recommend full release, prerelease, or draft status.
-- Prefer app-style tags such as `v1`, `v1.1`, and `v2` with release titles in the form `vX.Y - Plain-English Milestone`; do not rename historical tags solely for cosmetic consistency.
-- Treat work on PR or development branches as a release candidate. The final tag should normally point to the merge commit on `main` or `master`, unless the user explicitly approves releasing from another branch.
-- Do not create, rename, move, or delete tags or publish a GitHub release unless the user explicitly requests it.
+- Project-specific Rollup inputs include the S3 prefix, bundle file list, and `fireworks` local dependency. The shared
+  workflow resolves the latest `svelte-lib` and `fireworks` `main` refs to exact commit SHAs during each run.

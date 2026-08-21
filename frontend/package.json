@@ -12,6 +12,7 @@
     "package": "vite package",
     "preview": "vite preview",
     "preview:open": "vite preview --open",
+    "test": "node --test",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write '**/*.{css,cjs,html,js,json,svelte,svg}'",
@@ -26,6 +27,7 @@
     "esbuild": "^0.25.2"
   },
   "dependencies": {
+    "d3-ease": "3",
     "d3-timer": "3",
     "fireworks": "file:../../fireworks",
     "linklocal": "^2.8.2",

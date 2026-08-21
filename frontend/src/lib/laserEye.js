@@ -1,5 +1,5 @@
 import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
-import { configureCanvas2D } from "svelte-lib/functions/canvas"
+import { configureCanvas2D, strokeOrFillCircle } from "svelte-lib/functions/canvas"
 
 const laserEyeColor = "#cc0000"
 const laserEyeDelayStep = 225
@@ -60,18 +60,7 @@ export function drawLaserEyeCanvas({ canvas, circles, height, overflow = 0, time
       if (draw.strokeWidth <= 0 || draw.strokeOpacity <= 0) return
 
       context.globalAlpha = draw.strokeOpacity
-      context.beginPath()
-
-      if (draw.radius * 2 <= draw.strokeWidth) {
-        context.arc(draw.cx, draw.cy, draw.radius + draw.strokeWidth / 2, 0, Math.PI * 2)
-        context.fill()
-
-        return
-      }
-
-      context.lineWidth = draw.strokeWidth
-      context.arc(draw.cx, draw.cy, draw.radius, 0, Math.PI * 2)
-      context.stroke()
+      strokeOrFillCircle(context, { cx: draw.cx, cy: draw.cy, radius: draw.radius, strokeWidth: draw.strokeWidth })
     })
 
     context.globalAlpha = 1
