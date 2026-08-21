@@ -46,6 +46,14 @@ test("Frames and Diagonal select different paths through the same pixel states",
 
   assert.equal(frames.length, 2)
   assert.deepEqual(
+    frames[0].slices.map(slice => slice.indexes),
+    [[0], [1], [2], [3], [7], [11], [15], [14], [13], [12], [8], [4]]
+  )
+  assert.deepEqual(
+    frames[1].slices.map(slice => slice.indexes),
+    [[10], [9], [5], [6]]
+  )
+  assert.deepEqual(
     diagonal[0].slices.map(slice => slice.indexes.length),
     [1, 2, 3, 4, 3, 2, 1]
   )
