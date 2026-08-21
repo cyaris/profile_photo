@@ -13,6 +13,9 @@
   as a minimum, and add a constant safety floor when needed so a new set cannot reach pixels still transitioning.
 - Keep mode-specific timing invariants local. The built-in Diagonal delay keeps a restored pixel fully visible for as
   long as it remains fully hidden. Do not change pixel movement or fade durations to create the gap.
+- Keep `transitionReuseDuration`'s extra `transitionDuration` beyond full visual restoration. It reproduces the
+  pre-Canvas D3 rewrite's separate post-restore stroke-width settle transition before a pixel became reusable, and the
+  Diagonal delay default derives from it.
 
 ## Pixel Grid Rendering
 

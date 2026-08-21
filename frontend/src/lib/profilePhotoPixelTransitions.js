@@ -12,6 +12,9 @@ export const transitionDuration = 750
 const transitionFadeDelay = transitionDelay + transitionDuration + transitionDelay
 const transitionTotalDuration = transitionFadeDelay + transitionDuration
 const transitionDeactivateDelay = transitionTotalDuration + transitionHiddenHoldDuration
+// The pixel reaches its fully-restored resting display after transitionDeactivateDelay + transitionDuration; the
+// second transitionDuration reproduces the legacy D3 rewrite's separate post-restore stroke-width settle before a
+// pixel became reusable.
 export const transitionReuseDuration = transitionDeactivateDelay + transitionDuration * 2
 
 const pixelPhase = { idle: 0, activating: 1, hidden: 2, deactivating: 3 }
