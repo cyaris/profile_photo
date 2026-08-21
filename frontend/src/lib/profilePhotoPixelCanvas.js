@@ -55,11 +55,12 @@ function getSeparatorBuffers(geometry, pixelRatio) {
     return buffers
   }
 
-  let columnPositions = new Float64Array(columnCount + 1)
-  let rowPositions = new Float64Array(rowCount + 1)
-
-  for (let i = 0; i <= columnCount; i++) columnPositions[i] = Math.round((i * cellWidth + overflow) * pixelRatio)
-  for (let i = 0; i <= rowCount; i++) rowPositions[i] = Math.round((i * cellHeight + overflow) * pixelRatio)
+  let columnPositions = Float64Array.from({ length: columnCount + 1 }, (_, i) =>
+    Math.round((i * cellWidth + overflow) * pixelRatio)
+  )
+  let rowPositions = Float64Array.from({ length: rowCount + 1 }, (_, i) =>
+    Math.round((i * cellHeight + overflow) * pixelRatio)
+  )
 
   buffers = {
     cellWidth,
@@ -80,8 +81,7 @@ function getSeparatorBuffers(geometry, pixelRatio) {
 function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
   let { columnCount, columnPositions, opacities, rowCount, rowPositions } = getSeparatorBuffers(geometry, pixelRatio)
 
-  for (let i = 0; i < pixelRenderStates.length; i++) {
-    let { pixel, renderState } = pixelRenderStates[i]
+  for (let { pixel, renderState } of pixelRenderStates) {
     if (!renderState.rotation) opacities[pixel.y * columnCount + pixel.x] = renderState.opacity
   }
 

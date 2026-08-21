@@ -88,6 +88,13 @@
     )
   }
 
+  function getViewportGap(element, width) {
+    let bounds = element?.parentElement?.getBoundingClientRect()
+    if (!bounds || !width) return 0
+
+    return Math.max(0, Math.min(bounds.left, width - bounds.right))
+  }
+
   let displayWidth
   let displayHeight
   let contentWrapper
@@ -166,13 +173,6 @@
   $: isProfileReady = pixelCanvas && laserEyeCanvas && geometry
   $: laserEyeOverflow = displayWidth ? displayWidth * laserEyeRadiusScale : 0
   $: viewportGap = displayWidth ? getViewportGap(contentWrapper, viewportWidth) : 0
-
-  function getViewportGap(element, width) {
-    let bounds = element?.parentElement?.getBoundingClientRect()
-    if (!bounds || !width) return 0
-
-    return Math.max(0, Math.min(bounds.left, width - bounds.right))
-  }
 
   function renderPixels(timestamp) {
     if (!pixelCanvas || !geometry) return false

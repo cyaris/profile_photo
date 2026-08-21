@@ -1,6 +1,14 @@
 # profile_photo
 
-Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the source image. The frontend lets users reveal a pixel overlay on hover, switch between reveal modes, trigger laser-eye animation, run an automated transition mode, track reveal progress with a gauge, and launch fireworks after enough pixels are uncovered.
+Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the
+source image. The frontend lets users:
+
+- reveal a pixel overlay on hover
+- switch between reveal modes
+- trigger the laser-eye animation
+- run an automated transition mode
+- track reveal progress with a gauge
+- launch fireworks after uncovering enough pixels
 
 View the live tool at <a href="https://charlieyaris.com/" target="_blank" rel="noopener noreferrer">charlieyaris.com</a>.
 
@@ -69,8 +77,9 @@ example above shows the approximate defaults for the committed 48 by 48 grid.
 
 ## Pixel data generation
 
-The backend utility reads `frontend/src/lib/static/favicon.png` and writes `frontend/src/lib/static/pixels.json`. The
-generated JSON is committed so clean GitHub Actions checkouts can build the Rollup bundle.
+The backend utility reads `frontend/src/lib/static/favicon.png` and writes
+`frontend/src/lib/static/pixels.json`. The repository commits that JSON so clean GitHub Actions checkouts can build the
+Rollup bundle.
 
 From `backend`, install the Python project in editable mode if needed:
 
@@ -109,9 +118,9 @@ The laser vision feature's animation builds on the concentric-circles technique 
 
 ## GitHub Actions Workflows
 
-These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
-inputs, and secrets are documented in the
-[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
+These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. The
+[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows) documents shared
+behavior, inputs, and secrets.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
@@ -129,15 +138,20 @@ reviewing the generated plan and explicitly enabling publication for an approved
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `main` and on manual dispatch, then calls the
-[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
-`working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/pixels.json` when the source image or pixel-generation settings change. Uploads run on `dev`
-and `main` pushes or manual dispatches to build the full interactive `bundle.*` assets and the auto-transition-only
-`bundle2.*` assets, then upload them to `s3://cyaris.github.io/profile_photo/`. `main` uploads unprefixed
-production bundles, and `dev` uploads staged `test_`-prefixed bundle names. The workflow checks out `svelte-lib` and
-`fireworks` as local dependencies. Both dependencies use their latest `main` commits. The shared workflow resolves
-those branches to exact commit SHAs before checkout and passes the same resolved `fireworks` SHA to CI and upload.
+The `Rollup` workflow calls the
+[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these local details:
+
+- triggers: pushes to `dev` and `main`, plus manual dispatch
+- working directory: `frontend`
+- skipped shared-CI command: `npm run build`
+- destination: `s3://cyaris.github.io/profile_photo/`
+- production naming: unprefixed bundles from `main`
+- staged naming: `test_`-prefixed bundles from `dev`
+- bundle sets: full interactive `bundle.*` and auto-transition-only `bundle2.*`
+- local dependencies: latest `main` refs for `svelte-lib` and `fireworks`, resolved to exact SHAs
+
+Run a local production build after regenerating `frontend/src/lib/static/pixels.json` from a changed source image or
+pixel-generation setting.
 
 ### `.github/workflows/upstream-watch.yml`
 

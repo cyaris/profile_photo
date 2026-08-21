@@ -22,14 +22,10 @@ function getCellPixelIndex({ cellPixelIndexes, columnCount, rowCount, x, y }) {
   return cellPixelIndexes[getCellIndex({ columnCount, x, y })]
 }
 
-function createPixelRecord(pixel, index) {
-  return { ...pixel, index }
-}
-
 export function createPixelModel(sourcePixels) {
   let columnCount = Math.max(...sourcePixels.map(pixel => pixel.x + 1))
   let rowCount = Math.max(...sourcePixels.map(pixel => pixel.y + 1))
-  let pixelRecords = sourcePixels.map(createPixelRecord)
+  let pixelRecords = sourcePixels.map((pixel, index) => ({ ...pixel, index }))
   let cellPixelIndexes = new Int32Array(columnCount * rowCount)
 
   cellPixelIndexes.fill(-1)
