@@ -56,10 +56,10 @@ npm run format:check
 
 `ProfilePhoto` accepts two timing props, expressed in milliseconds and keyed by Auto Transition mode:
 
-|Prop|Behavior|
-|---|---|
-|`autoTransitionSetDuration`|Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo.|
-|`autoTransitionSetDelay`|Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning.|
+| Prop | Behavior |
+| --- | --- |
+| `autoTransitionSetDuration` | Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo. |
+| `autoTransitionSetDelay` | Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning. |
 
 Pass either complete or partial mode values; an omitted mode retains its built-in timing:
 
