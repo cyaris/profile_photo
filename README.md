@@ -52,28 +52,36 @@ npm run lint
 npm run format:check
 ```
 
-## Auto Transition timing
+## Auto Transition configuration
 
-`ProfilePhoto` accepts two timing props, expressed in milliseconds and keyed by Auto Transition mode:
+`ProfilePhoto` accepts these Auto Transition props. Timing values are expressed in milliseconds and keyed by mode:
 
 | Prop | Behavior |
 | --- | --- |
+| `autoTransitionDiagonalCorner` | Corner where each Diagonal set begins. Defaults to `top-left`; an unsupported value also falls back to `top-left`. |
 | `autoTransitionSetDuration` | Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo. |
 | `autoTransitionSetDelay` | Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning. |
+
+Accepted `autoTransitionDiagonalCorner` values:
+
+- `top-left` (default)
+- `top-right`
+- `bottom-right`
+- `bottom-left`
 
 Pass either complete or partial mode values; an omitted mode retains its built-in timing:
 
 ```svelte
 <ProfilePhoto
-  autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
-  autoTransitionSetDelay={{ frames: 0, diagonal: 733.333 }}
+  autoTransitionDiagonalCorner="bottom-right"
+  autoTransitionSetDuration={{ frames: 11400, diagonal: 6266.667 }}
+  autoTransitionSetDelay={{ frames: 0, diagonal: 1466.667 }}
 />
 ```
 
-The built-in values derive from the current pixel grid and preserve the original cadence of approximately 30 pixel
-slices per second. In Diagonal mode, the default delay gives a fully restored pixel the same rest interval that it had
-while fully hidden; it does not change the speed at which a pixel moves or fades into or out of its hidden state. The
-example above shows the approximate defaults for the committed 48 by 48 grid.
+The built-in durations derive from the current pixel grid and traverse approximately 15 pixel slices per second. The
+Diagonal delay remains independent of pixel movement and fade durations. The example above shows the approximate
+defaults for the committed 48 by 48 grid.
 
 ## Pixel data generation
 

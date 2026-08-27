@@ -11,8 +11,9 @@
   what completes a set per mode—for example, one perimeter for Frames and the full photo for Diagonal—without deriving
   cadence from transition lifecycle. Keep the effective gap constant across completed sets, treat the configured delay
   as a minimum, and add a constant safety floor when needed so a new set cannot reach pixels still transitioning.
-- Keep mode-specific timing invariants local. The built-in Diagonal delay keeps a restored pixel fully visible for as
-  long as it remains fully hidden. Do not change pixel movement or fade durations to create the gap.
+- Keep mode-specific timing invariants local. Calculate the built-in Diagonal delay from the transition reuse lifecycle
+  at the baseline 30-slice cadence, then apply the default timing multiplier independently. Do not change pixel movement
+  or fade durations to create the gap.
 - Keep `transitionReuseDuration`'s extra `transitionDuration` beyond full visual restoration. It reproduces the
   pre-Canvas D3 rewrite's separate post-restore stroke-width settle transition before a pixel became reusable, and the
   Diagonal delay default derives from it.
