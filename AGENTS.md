@@ -32,4 +32,5 @@
 ## Rollup Delivery
 
 - Project-specific Rollup inputs include the S3 prefix, bundle file list, and `fireworks` local dependency. The shared
-  workflow resolves the latest `svelte-lib` and `fireworks` `main` refs to exact commit SHAs during each run.
+  workflow resolves `svelte-lib` and `fireworks` from `dev` for dev runs and from `main` for production runs, pinning
+  the selected branches to exact commit SHAs during each run.
