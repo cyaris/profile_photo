@@ -154,7 +154,7 @@ The `Rollup` workflow calls the
 - skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/profile_photo/`
 - production naming: unprefixed bundles from `main`
-- staged naming: `test_`-prefixed bundles from `dev`
+- staged naming: `dev_`-prefixed bundles from `dev`
 - bundle sets: full interactive `bundle.*` and auto-transition-only `bundle2.*`
 - local dependencies: `dev` refs for staged runs and `main` refs for production runs for both `svelte-lib` and
   `fireworks`, resolved to exact SHAs
