@@ -42,9 +42,7 @@
     pixelRecords,
     rowCount: pixelRowCount
   } = createPixelModel(pixels)
-  const baseAutoTransitionStepDuration = 1000 / 30
-  const defaultAutoTransitionTimingMultiplier = 1
-  const defaultAutoTransitionStepDuration = baseAutoTransitionStepDuration * defaultAutoTransitionTimingMultiplier
+  const defaultAutoTransitionStepDuration = 1000 / 30
   const modeItems = [
     { value: "reveal", label: "Reveal" },
     { value: "transition", label: "Transition" },
@@ -86,10 +84,9 @@
     if (modeKey == "frames") return 0
 
     return (
-      (transitionReuseDuration -
-        (stepCount.diagonal - 2) * baseAutoTransitionStepDuration +
-        getAutoTransitionPixelHiddenDuration(baseAutoTransitionStepDuration)) *
-      defaultAutoTransitionTimingMultiplier
+      transitionReuseDuration -
+      (stepCount.diagonal - 2) * defaultAutoTransitionStepDuration +
+      getAutoTransitionPixelHiddenDuration(defaultAutoTransitionStepDuration)
     )
   }
 
