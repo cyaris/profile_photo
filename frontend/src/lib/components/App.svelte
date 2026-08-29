@@ -43,7 +43,7 @@
     rowCount: pixelRowCount
   } = createPixelModel(pixels)
   const baseAutoTransitionStepDuration = 1000 / 30
-  const defaultAutoTransitionTimingMultiplier = 2
+  const defaultAutoTransitionTimingMultiplier = 1
   const defaultAutoTransitionStepDuration = baseAutoTransitionStepDuration * defaultAutoTransitionTimingMultiplier
   const modeItems = [
     { value: "reveal", label: "Reveal" },

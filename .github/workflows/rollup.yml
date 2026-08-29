@@ -40,7 +40,7 @@ jobs:
         bundle2.css:text/css
         bundle2.js:application/javascript
       s3-bucket: cyaris.github.io
-      s3-prefix: profile_photo
+      s3-prefix: pixel_portrait
       aws-region: us-east-2
       aws-role-to-assume: ${{ vars.AWS_ROLLUP_UPLOAD_ROLE_ARN }}
       manual-dry-run: ${{ inputs.dry-run || false }}

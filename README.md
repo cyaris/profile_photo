@@ -1,4 +1,4 @@
-# profile_photo
+# pixel_portrait
 
 Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the
 source image. The frontend lets users:
@@ -74,12 +74,12 @@ Pass either complete or partial mode values; an omitted mode retains its built-i
 ```svelte
 <ProfilePhoto
   autoTransitionDiagonalCorner="bottom-right"
-  autoTransitionSetDuration={{ frames: 11400, diagonal: 6266.667 }}
-  autoTransitionSetDelay={{ frames: 0, diagonal: 1466.667 }}
+  autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
+  autoTransitionSetDelay={{ frames: 0, diagonal: 733.333 }}
 />
 ```
 
-The built-in durations derive from the current pixel grid and traverse approximately 15 pixel slices per second. The
+The built-in durations derive from the current pixel grid and traverse approximately 30 pixel slices per second. The
 Diagonal delay remains independent of pixel movement and fade durations. The example above shows the approximate
 defaults for the committed 48 by 48 grid.
 
@@ -152,7 +152,7 @@ The `Rollup` workflow calls the
 - triggers: pushes to `dev` and `main`, plus manual dispatch
 - working directory: `frontend`
 - skipped shared-CI command: `npm run build`
-- destination: `s3://cyaris.github.io/profile_photo/`
+- destination: `s3://cyaris.github.io/pixel_portrait/`
 - production naming: unprefixed bundles from `main`
 - staged naming: `dev_`-prefixed bundles from `dev`
 - bundle sets: full interactive `bundle.*` and auto-transition-only `bundle2.*`
