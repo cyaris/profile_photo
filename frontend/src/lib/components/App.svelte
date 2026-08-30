@@ -168,7 +168,7 @@
   $: autoTransitionConfigKey = [
     activeMode,
     transitionPixelRadius,
-    autoTransitionDiagonalCornerIndex,
+    isAutoTransitionDiagonal ? autoTransitionDiagonalCornerIndex : undefined,
     autoTransitionStepInterval,
     resolvedAutoTransitionSetDelay,
     pixelColumnCount,

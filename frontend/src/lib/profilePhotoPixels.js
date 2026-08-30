@@ -40,7 +40,9 @@ export function createRevealFlags(pixelCount) {
 }
 
 export function getAutoTransitionDiagonalCornerIndex(corner) {
-  return autoTransitionDiagonalCornerIndexes[corner] ?? autoTransitionDiagonalCornerIndexes["top-left"]
+  return Object.prototype.hasOwnProperty.call(autoTransitionDiagonalCornerIndexes, corner)
+    ? autoTransitionDiagonalCornerIndexes[corner]
+    : autoTransitionDiagonalCornerIndexes["top-left"]
 }
 
 export function createTransitionNeighborhoods({ cellPixelIndexes, columnCount, rowCount, radius }) {
