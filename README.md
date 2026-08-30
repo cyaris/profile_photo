@@ -1,4 +1,4 @@
-# profile_photo
+# pixel_portrait
 
 Interactive Svelte profile-photo experiment with a small Python backend utility for generating pixel data from the
 source image. The frontend lets users:
@@ -52,28 +52,36 @@ npm run lint
 npm run format:check
 ```
 
-## Auto Transition timing
+## Auto Transition configuration
 
-`ProfilePhoto` accepts two timing props, expressed in milliseconds and keyed by Auto Transition mode:
+`ProfilePhoto` accepts these Auto Transition props. Timing values are expressed in milliseconds and keyed by mode:
 
 | Prop | Behavior |
 | --- | --- |
+| `autoTransitionDiagonalCorner` | Corner where each Diagonal set begins. Defaults to `top-left`; an unsupported value also falls back to `top-left`. |
 | `autoTransitionSetDuration` | Time for one set to complete. `frames` controls traversal of the longest full perimeter; smaller concentric perimeters use the same pixel-step speed. `diagonal` controls traversal across the full photo. |
 | `autoTransitionSetDelay` | Pause after a completed set before that path starts its next set. The scheduler may extend a configured delay when necessary to prevent a new set from reusing pixels that are still transitioning. |
+
+Accepted `autoTransitionDiagonalCorner` values:
+
+- `top-left` (default)
+- `top-right`
+- `bottom-right`
+- `bottom-left`
 
 Pass either complete or partial mode values; an omitted mode retains its built-in timing:
 
 ```svelte
 <ProfilePhoto
+  autoTransitionDiagonalCorner="bottom-right"
   autoTransitionSetDuration={{ frames: 5700, diagonal: 3133.333 }}
   autoTransitionSetDelay={{ frames: 0, diagonal: 733.333 }}
 />
 ```
 
-The built-in values derive from the current pixel grid and preserve the original cadence of approximately 30 pixel
-slices per second. In Diagonal mode, the default delay gives a fully restored pixel the same rest interval that it had
-while fully hidden; it does not change the speed at which a pixel moves or fades into or out of its hidden state. The
-example above shows the approximate defaults for the committed 48 by 48 grid.
+The built-in durations derive from the current pixel grid and traverse approximately 30 pixel slices per second. The
+Diagonal delay remains independent of pixel movement and fade durations. The example above shows the approximate
+defaults for the committed 48 by 48 grid.
 
 ## Pixel data generation
 
@@ -144,11 +152,12 @@ The `Rollup` workflow calls the
 - triggers: pushes to `dev` and `main`, plus manual dispatch
 - working directory: `frontend`
 - skipped shared-CI command: `npm run build`
-- destination: `s3://cyaris.github.io/profile_photo/`
+- destination: `s3://cyaris.github.io/pixel_portrait/`
 - production naming: unprefixed bundles from `main`
-- staged naming: `test_`-prefixed bundles from `dev`
+- staged naming: `dev_`-prefixed bundles from `dev`
 - bundle sets: full interactive `bundle.*` and auto-transition-only `bundle2.*`
-- local dependencies: latest `main` refs for `svelte-lib` and `fireworks`, resolved to exact SHAs
+- local dependencies: `dev` refs for staged runs and `main` refs for production runs for both `svelte-lib` and
+  `fireworks`, resolved to exact SHAs
 
 Run a local production build after regenerating `frontend/src/lib/static/pixels.json` from a changed source image or
 pixel-generation setting.
@@ -158,9 +167,9 @@ pixel-generation setting.
 The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes after `fireworks`'s own upstream watch and 30
 minutes before the GitHub Pages build for `cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
-watches `svelte-lib`'s and `fireworks`'s `main` branches and, when either has moved since the last check, dispatches
-this repository's own `Rollup` workflow on `main` so the build picks up the new upstream commit without waiting for a
-push here.
+watches `svelte-lib`'s and `fireworks`'s `dev` and `main` branch commits independently. When a watched branch moves, it
+dispatches this repository's `Rollup` workflow on the matching branch so staged and production bundles pick up the
+corresponding upstream code without waiting for a push here.
 
 ### `.github/workflows/workflow-validation.yml`
 

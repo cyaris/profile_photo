@@ -14,6 +14,7 @@
     createPixelModel,
     createRevealFlags,
     createTransitionNeighborhoods,
+    getAutoTransitionDiagonalCornerIndex,
     getGridLinePixelIndexes,
     getPixelIndexFromPoint,
     getPixelNeighborhood
@@ -28,6 +29,7 @@
   import profilePhotoSrc from "../static/favicon.png"
   import pixels from "../static/pixels.json"
 
+  export let autoTransitionDiagonalCorner = "top-left"
   export let autoTransitionSetDelay = undefined
   export let autoTransitionSetDuration = undefined
   export let forcedMode = undefined
@@ -78,13 +80,13 @@
     return modeItems.findIndex(item => item.value == mode)
   }
 
-  function getDefaultAutoTransitionSetDelay(modeKey, stepCount, stepInterval) {
+  function getDefaultAutoTransitionSetDelay(modeKey, stepCount) {
     if (modeKey == "frames") return 0
 
     return (
       transitionReuseDuration -
-      (stepCount.diagonal - 2) * stepInterval +
-      getAutoTransitionPixelHiddenDuration(stepInterval)
+      (stepCount.diagonal - 2) * defaultAutoTransitionStepDuration +
+      getAutoTransitionPixelHiddenDuration(defaultAutoTransitionStepDuration)
     )
   }
 
@@ -128,6 +130,7 @@
   $: isAutoTransition = isAutoTransitionFrames || isAutoTransitionDiagonal
   $: isTransitionMode = activeMode == "transition" || isAutoTransition
   $: autoTransitionModeKey = isAutoTransitionDiagonal ? "diagonal" : "frames"
+  $: autoTransitionDiagonalCornerIndex = getAutoTransitionDiagonalCornerIndex(autoTransitionDiagonalCorner)
   $: configuredAutoTransitionSetDuration = autoTransitionSetDuration?.[autoTransitionModeKey]
   $: configuredAutoTransitionSetDelay = autoTransitionSetDelay?.[autoTransitionModeKey]
   $: resolvedAutoTransitionSetDuration = Number.isFinite(configuredAutoTransitionSetDuration)
@@ -139,7 +142,7 @@
   )
   $: resolvedAutoTransitionSetDelay = Number.isFinite(configuredAutoTransitionSetDelay)
     ? Math.max(configuredAutoTransitionSetDelay, 0)
-    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionSetStepCount, autoTransitionStepInterval)
+    : getDefaultAutoTransitionSetDelay(autoTransitionModeKey, autoTransitionSetStepCount)
   $: transitionNeighborhoods = createTransitionNeighborhoods({
     cellPixelIndexes,
     columnCount: pixelColumnCount,
@@ -165,6 +168,7 @@
   $: autoTransitionConfigKey = [
     activeMode,
     transitionPixelRadius,
+    isAutoTransitionDiagonal ? autoTransitionDiagonalCornerIndex : undefined,
     autoTransitionStepInterval,
     resolvedAutoTransitionSetDelay,
     pixelColumnCount,
@@ -441,7 +445,7 @@
     autoTransitionPaths = isAutoTransitionDiagonal
       ? createAutoTransitionDiagonalPaths({
           columnCount: pixelColumnCount,
-          cornerIndex: Math.floor(Math.random() * 4),
+          cornerIndex: autoTransitionDiagonalCornerIndex,
           pixels: pixelRecords,
           rowCount: pixelRowCount
         })

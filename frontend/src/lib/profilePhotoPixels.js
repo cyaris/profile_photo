@@ -7,6 +7,7 @@ import {
 } from "./profilePhotoPixelTransitions.js"
 
 const timingTolerance = 0.001
+const autoTransitionDiagonalCornerIndexes = { "top-left": 0, "top-right": 1, "bottom-right": 2, "bottom-left": 3 }
 
 function getTransitionRegionWidth(radius) {
   return Math.max(Math.floor(radius), 0) * 2 + 1
@@ -36,6 +37,12 @@ export function createPixelModel(sourcePixels) {
 
 export function createRevealFlags(pixelCount) {
   return new Uint8Array(pixelCount)
+}
+
+export function getAutoTransitionDiagonalCornerIndex(corner) {
+  return Object.prototype.hasOwnProperty.call(autoTransitionDiagonalCornerIndexes, corner)
+    ? autoTransitionDiagonalCornerIndexes[corner]
+    : autoTransitionDiagonalCornerIndexes["top-left"]
 }
 
 export function createTransitionNeighborhoods({ cellPixelIndexes, columnCount, rowCount, radius }) {

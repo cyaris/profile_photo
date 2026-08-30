@@ -7,6 +7,7 @@ import {
   createAutoTransitionFramePaths,
   createPixelModel,
   createTransitionNeighborhoods,
+  getAutoTransitionDiagonalCornerIndex,
   getGridLinePixelIndexes,
   getPixelNeighborhood
 } from "../src/lib/profilePhotoPixels.js"
@@ -71,6 +72,24 @@ test("Frames and Diagonal select different paths through the same pixel states",
   path.setCompletedAt = 20
   assert.equal(advanceAutoTransitionPath({ path, now: 21, setDelay: transitionReuseDuration, states }), false)
   assert.equal(path.activeSliceIndex, path.slices.length - 1)
+})
+
+test("Diagonal corner names begin paths at the selected portrait corner", () => {
+  let { columnCount, pixelRecords, rowCount } = createPixelModel(pixels)
+  let firstPixelIndex = { "top-left": 0, "top-right": 3, "bottom-right": 15, "bottom-left": 12 }
+
+  Object.entries(firstPixelIndex).forEach(([corner, pixelIndex]) => {
+    let [path] = createAutoTransitionDiagonalPaths({
+      columnCount,
+      cornerIndex: getAutoTransitionDiagonalCornerIndex(corner),
+      pixels: pixelRecords,
+      rowCount
+    })
+
+    assert.deepEqual(path.slices[0].indexes, [pixelIndex])
+  })
+
+  assert.equal(getAutoTransitionDiagonalCornerIndex("unsupported"), 0)
 })
 
 test("auto paths skip a slice until its shared pixel transition is reusable", () => {
