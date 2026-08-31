@@ -1,4 +1,5 @@
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
+import { getCSSCustomProperty } from "svelte-lib/functions/dom"
 
 import { advancePixelTransitionStates, getPixelTransitionDisplay } from "./profilePhotoPixelTransitions.js"
 
@@ -78,7 +79,7 @@ function getSeparatorBuffers(geometry, pixelRatio) {
   return buffers
 }
 
-function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
+function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio, color) {
   let { columnCount, columnPositions, opacities, rowCount, rowPositions } = getSeparatorBuffers(geometry, pixelRatio)
 
   for (let { pixel, renderState } of pixelRenderStates) {
@@ -87,7 +88,7 @@ function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
 
   context.save()
   context.setTransform(1, 0, 0, 1, 0, 0)
-  context.fillStyle = "white"
+  context.fillStyle = color
 
   for (let column = 0; column <= columnCount; column++) {
     let x = columnPositions[column]
@@ -151,6 +152,7 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
+  let borderColor = getCSSCustomProperty("--ui-surface", canvas).trim() || "#ffffff"
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
     renderState: getPixelTransitionDisplay(pixel, states[pixel.index], geometry, timestamp)
@@ -159,9 +161,9 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   context.clearRect(0, 0, canvasWidth, canvasHeight)
   context.save()
   context.translate(overflow, overflow)
-  context.strokeStyle = "white"
+  context.strokeStyle = borderColor
   pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
-  drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio)
+  drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio, borderColor)
   pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
   context.restore()
 
