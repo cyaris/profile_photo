@@ -1,9 +1,8 @@
 <script>
-  import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
-  import { createAnimationLoop, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { createAnimationLoop, createPausableTimer, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
   import { drawPixelCanvas } from "../profilePhotoPixelCanvas.js"
@@ -384,7 +383,7 @@
 
     if (laserVisionEnabled) {
       executeLaserEyes()
-      laserEyesTimer = interval(executeLaserEyes, 3000)
+      laserEyesTimer = createPausableTimer(executeLaserEyes, 3000, { repeat: true })
     } else {
       stopLaserEyes()
     }
