@@ -108,7 +108,7 @@
   let revealedPixels = createRevealFlags(pixelRecords.length)
   let revealedPixelCount = 0
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
-  let modeSelectValue = modeItems[sliderValue]
+  let modeSelectValue
   let laserEyesTimer
   let laserEyeCircles = []
   let laserVisionEnabled = false

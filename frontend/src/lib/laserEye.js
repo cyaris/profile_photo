@@ -15,7 +15,7 @@ const laserEyePositions = [
 export const laserEyeRadiusScale = 0.75
 
 export function createLaserEyeBurst({ displayHeight, displayWidth, now }) {
-  return Array.from({ length: 4 }, (_, i) => i).flatMap(i =>
+  return Array.from({ length: 4 }).flatMap((_, i) =>
     laserEyePositions.map(({ xRatio, yRatio }) => ({
       cx: displayWidth * xRatio,
       cy: displayHeight * yRatio,

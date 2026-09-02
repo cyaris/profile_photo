@@ -2,8 +2,8 @@
 
 ## Shared Conventions
 
-- Inherit README and Markdown style, GitHub Actions, reusable workflow, pull-request review, workflow failure, commit,
-  and release-management rules from `../shared-automation/AGENTS.md`.
+- Inherit README and Markdown style, GitHub Actions, reusable workflow wrapper, release policy, dispatch, pull-request
+  review, workflow failure, commit, and release-management rules from `../shared-automation/AGENTS.md`.
 
 ## Auto Transition Timing
 
@@ -31,6 +31,4 @@
 
 ## Rollup Delivery
 
-- Project-specific Rollup inputs include the S3 prefix, bundle file list, and `fireworks` local dependency. The shared
-  workflow resolves `svelte-lib` and `fireworks` from `dev` for dev runs and from `main` for production runs, pinning
-  the selected branches to exact commit SHAs during each run.
+- Project-specific Rollup inputs include the S3 prefix, bundle file list, and a local dependency ref for `fireworks`.
