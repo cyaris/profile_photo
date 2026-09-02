@@ -1,5 +1,4 @@
 import { configureCanvas2D } from "svelte-lib/functions/canvas"
-import { getCSSCustomProperty } from "svelte-lib/functions/dom"
 
 import { advancePixelTransitionStates, getPixelTransitionDisplay } from "./profilePhotoPixelTransitions.js"
 
@@ -145,14 +144,13 @@ function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio, c
   context.restore()
 }
 
-export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
+export function drawPixelCanvas({ borderColor, canvas, geometry, pixels, states, timestamp }) {
   let overflow = geometry.overflow ?? 0
   let canvasHeight = geometry.height + overflow * 2
   let canvasWidth = geometry.width + overflow * 2
   let { context, pixelRatio } = configureCanvas2D({ canvas, height: canvasHeight, width: canvasWidth })
   if (!context) return false
 
-  let borderColor = getCSSCustomProperty("--ui-surface", canvas).trim() || "#ffffff"
   let pixelRenderStates = pixels.map(pixel => ({
     pixel,
     renderState: getPixelTransitionDisplay(pixel, states[pixel.index], geometry, timestamp)

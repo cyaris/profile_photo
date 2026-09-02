@@ -3,6 +3,7 @@
   import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
   import { createAnimationLoop, createPausableTimer, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { getCSSCustomProperty } from "svelte-lib/functions/dom"
 
   import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
   import { drawPixelCanvas } from "../profilePhotoPixelCanvas.js"
@@ -101,6 +102,7 @@
   let contentWrapper
   let viewportWidth
   let pixelCanvas
+  let pixelBorderColor = "#ffffff"
   let laserEyeCanvas
   let pixelStates = createPixelStates(pixelRecords.length)
   let revealedPixels = createRevealFlags(pixelRecords.length)
@@ -180,13 +182,25 @@
   function renderPixels(timestamp) {
     if (!pixelCanvas || !geometry) return false
 
-    return drawPixelCanvas({ canvas: pixelCanvas, geometry, pixels: pixelRecords, states: pixelStates, timestamp })
+    return drawPixelCanvas({
+      borderColor: pixelBorderColor,
+      canvas: pixelCanvas,
+      geometry,
+      pixels: pixelRecords,
+      states: pixelStates,
+      timestamp
+    })
   }
 
   let pixelAnimationLoop = createAnimationLoop(renderPixels)
 
   function scheduleRender() {
     if (!isDestroyed) pixelAnimationLoop.start()
+  }
+
+  function syncPixelBorderColor() {
+    pixelBorderColor = getCSSCustomProperty("--ui-surface", pixelCanvas).trim() || "#ffffff"
+    scheduleRender()
   }
 
   function laserEyeFrame(timestamp) {
@@ -489,6 +503,8 @@
     stopAutoTransition({ reset: isAutoTransition })
   }
 
+  onMount(syncPixelBorderColor)
+
   onMount(() => {
     let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
@@ -509,7 +525,7 @@
   })
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} on:palettechange={scheduleRender} />
+<svelte:window bind:innerWidth={viewportWidth} on:palettechange={syncPixelBorderColor} />
 
 <div
   class="mb-8 flex flex-col items-center overflow-x-clip"
