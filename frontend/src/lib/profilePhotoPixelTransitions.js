@@ -95,16 +95,17 @@ function getTransitioningPixelDisplay(resting, activated, moveProgress, opacity)
 }
 
 function getActivatingPixelDisplay(pixel, state, geometry, timestamp) {
-  let resting = getRestingPixelDisplay(pixel, geometry)
-  let activated = getActivatedPixelDisplay(pixel, geometry)
   let { moveProgress, fadeProgress } = getActivatingProgress(state, timestamp)
 
-  return getTransitioningPixelDisplay(resting, activated, moveProgress, 1 - fadeProgress)
+  return getTransitioningPixelDisplay(
+    getRestingPixelDisplay(pixel, geometry),
+    getActivatedPixelDisplay(pixel, geometry),
+    moveProgress,
+    1 - fadeProgress
+  )
 }
 
 function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
-  let resting = getRestingPixelDisplay(pixel, geometry)
-  let activated = getActivatedPixelDisplay(pixel, geometry)
   let reverseProgress = getEasedProgress({
     delay: transitionDeactivateDelay,
     duration: transitionDuration,
@@ -113,7 +114,12 @@ function getDeactivatingPixelDisplay(pixel, state, geometry, timestamp) {
     start: state.deactivationStart
   })
 
-  return getTransitioningPixelDisplay(resting, activated, 1 - reverseProgress, reverseProgress)
+  return getTransitioningPixelDisplay(
+    getRestingPixelDisplay(pixel, geometry),
+    getActivatedPixelDisplay(pixel, geometry),
+    1 - reverseProgress,
+    reverseProgress
+  )
 }
 
 export function getPixelTransitionDisplay(pixel, state, geometry, timestamp) {

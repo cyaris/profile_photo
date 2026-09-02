@@ -1,9 +1,9 @@
 <script>
-  import { interval } from "d3-timer"
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
   import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
-  import { createAnimationLoop, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { createAnimationLoop, createPausableTimer, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { getCSSCustomProperty } from "svelte-lib/functions/dom"
 
   import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
   import { drawPixelCanvas } from "../profilePhotoPixelCanvas.js"
@@ -102,12 +102,13 @@
   let contentWrapper
   let viewportWidth
   let pixelCanvas
+  let pixelBorderColor = "#ffffff"
   let laserEyeCanvas
   let pixelStates = createPixelStates(pixelRecords.length)
   let revealedPixels = createRevealFlags(pixelRecords.length)
   let revealedPixelCount = 0
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
-  let modeSelectValue = modeItems[sliderValue]
+  let modeSelectValue
   let laserEyesTimer
   let laserEyeCircles = []
   let laserVisionEnabled = false
@@ -181,13 +182,25 @@
   function renderPixels(timestamp) {
     if (!pixelCanvas || !geometry) return false
 
-    return drawPixelCanvas({ canvas: pixelCanvas, geometry, pixels: pixelRecords, states: pixelStates, timestamp })
+    return drawPixelCanvas({
+      borderColor: pixelBorderColor,
+      canvas: pixelCanvas,
+      geometry,
+      pixels: pixelRecords,
+      states: pixelStates,
+      timestamp
+    })
   }
 
   let pixelAnimationLoop = createAnimationLoop(renderPixels)
 
   function scheduleRender() {
     if (!isDestroyed) pixelAnimationLoop.start()
+  }
+
+  function syncPixelBorderColor() {
+    pixelBorderColor = getCSSCustomProperty("--ui-surface", pixelCanvas).trim() || "#ffffff"
+    scheduleRender()
   }
 
   function laserEyeFrame(timestamp) {
@@ -384,7 +397,7 @@
 
     if (laserVisionEnabled) {
       executeLaserEyes()
-      laserEyesTimer = interval(executeLaserEyes, 3000)
+      laserEyesTimer = createPausableTimer(executeLaserEyes, 3000, { repeat: true })
     } else {
       stopLaserEyes()
     }
@@ -490,6 +503,8 @@
     stopAutoTransition({ reset: isAutoTransition })
   }
 
+  onMount(syncPixelBorderColor)
+
   onMount(() => {
     let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
@@ -510,7 +525,7 @@
   })
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} />
+<svelte:window bind:innerWidth={viewportWidth} on:palettechange={syncPixelBorderColor} />
 
 <div
   class="mb-8 flex flex-col items-center overflow-x-clip"

@@ -122,7 +122,7 @@ If either local package changes, rebuild that package before refreshing this app
 ## Credits
 
 The laser vision feature's animation builds on the concentric-circles technique from
-[mrtriangle's block](http://bl.ocks.org/mrtriangle/11222485).
+<a href="http://bl.ocks.org/mrtriangle/11222485" target="_blank" rel="noopener noreferrer">mrtriangle's block</a>.
 
 ## GitHub Actions Workflows
 
@@ -132,26 +132,25 @@ behavior, inputs, and secrets.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
-The `Auto-create dev pull request` workflow runs on pushes to `dev`, then calls the
+Runs on pushes to `dev`, then calls the
 [shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml)
-to open a pull request from `dev` to `main` when one doesn't already exist. It passes the repository's
-`RELEASE_TOKEN` secret so trusted user or agent-authored pushes to `dev` can open the pull request.
+to open a pull request from `dev` to `main` when one doesn't already exist. It passes the repository's `RELEASE_TOKEN`
+secret so trusted user or agent-authored pushes to `dev` can open the pull request.
 
 ### `.github/workflows/auto-release.yml`
 
-The `Auto release` workflow runs from manual dispatch only and calls the
+Runs from manual dispatch only and calls the
 [shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
 repository contributes `.github/release-policy.yml` overrides. Release creation or existing-release updates require
 reviewing the generated plan and explicitly enabling publication for an approved run.
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow calls the
-[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these local details:
+Calls the [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these
+local details:
 
 - triggers: pushes to `dev` and `main`, plus manual dispatch
 - working directory: `frontend`
-- skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/pixel_portrait/`
 - production naming: unprefixed bundles from `main`
 - staged naming: `dev_`-prefixed bundles from `dev`
@@ -159,13 +158,10 @@ The `Rollup` workflow calls the
 - local dependencies: `dev` refs for staged runs and `main` refs for production runs for both `svelte-lib` and
   `fireworks`, resolved to exact SHAs
 
-Run a local production build after regenerating `frontend/src/lib/static/pixels.json` from a changed source image or
-pixel-generation setting.
-
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes after `fireworks`'s own upstream watch and 30
-minutes before the GitHub Pages build for `cyaris.github.io`, and on manual dispatch, then calls the
+Runs daily at 12:53 UTC, 30 minutes after `fireworks`'s own upstream watch and 30 minutes before the GitHub Pages build
+for `cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s and `fireworks`'s `dev` and `main` branch commits independently. When a watched branch moves, it
 dispatches this repository's `Rollup` workflow on the matching branch so staged and production bundles pick up the
@@ -173,6 +169,7 @@ corresponding upstream code without waiting for a push here.
 
 ### `.github/workflows/workflow-validation.yml`
 
-The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
+Runs on `dev` and `main` pushes that change `.github/release-policy.yml`, `.github/workflows/**`, or `renovate.json`,
+and on manual dispatch, then calls the
 [shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
 to validate rollup upload wrapper logic, release-policy configuration, and Renovate configuration.

@@ -78,7 +78,7 @@ function getSeparatorBuffers(geometry, pixelRatio) {
   return buffers
 }
 
-function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
+function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio, color) {
   let { columnCount, columnPositions, opacities, rowCount, rowPositions } = getSeparatorBuffers(geometry, pixelRatio)
 
   for (let { pixel, renderState } of pixelRenderStates) {
@@ -87,7 +87,7 @@ function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
 
   context.save()
   context.setTransform(1, 0, 0, 1, 0, 0)
-  context.fillStyle = "white"
+  context.fillStyle = color
 
   for (let column = 0; column <= columnCount; column++) {
     let x = columnPositions[column]
@@ -144,7 +144,7 @@ function drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio) {
   context.restore()
 }
 
-export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp }) {
+export function drawPixelCanvas({ borderColor, canvas, geometry, pixels, states, timestamp }) {
   let overflow = geometry.overflow ?? 0
   let canvasHeight = geometry.height + overflow * 2
   let canvasWidth = geometry.width + overflow * 2
@@ -159,9 +159,9 @@ export function drawPixelCanvas({ canvas, geometry, pixels, states, timestamp })
   context.clearRect(0, 0, canvasWidth, canvasHeight)
   context.save()
   context.translate(overflow, overflow)
-  context.strokeStyle = "white"
+  context.strokeStyle = borderColor
   pixelRenderStates.forEach(({ pixel, renderState }) => fillPixel(context, pixel, renderState))
-  drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio)
+  drawPixelSeparators(context, pixelRenderStates, geometry, pixelRatio, borderColor)
   pixelRenderStates.forEach(({ renderState }) => strokePixel(context, renderState))
   context.restore()
 

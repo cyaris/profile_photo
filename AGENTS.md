@@ -2,8 +2,8 @@
 
 ## Shared Conventions
 
-- Inherit README and Markdown style, GitHub Actions, reusable workflow, pull-request review, workflow failure, commit,
-  and release-management rules from `../shared-automation/AGENTS.md`.
+- Inherit README and Markdown style, GitHub Actions, reusable workflow wrapper, release policy, dispatch, pull-request
+  review, workflow failure, commit, and release-management rules from `../shared-automation/AGENTS.md`.
 
 ## Auto Transition Timing
 
@@ -18,6 +18,11 @@
   pre-Canvas D3 rewrite's separate post-restore stroke-width settle transition before a pixel became reusable, and the
   Diagonal delay default derives from it.
 
+## Data Generation
+
+- Regenerate and commit `frontend/src/lib/static/pixels.json` after changing the source image or a pixel-generation
+  setting.
+
 ## Pixel Grid Rendering
 
 - Draw each pixel-grid boundary once in `drawPixelSeparators`, not as a per-pixel `strokeRect`. Derive its alpha from
@@ -31,6 +36,4 @@
 
 ## Rollup Delivery
 
-- Project-specific Rollup inputs include the S3 prefix, bundle file list, and `fireworks` local dependency. The shared
-  workflow resolves `svelte-lib` and `fireworks` from `dev` for dev runs and from `main` for production runs, pinning
-  the selected branches to exact commit SHAs during each run.
+- Project-specific Rollup inputs include the S3 prefix, bundle file list, and a local dependency ref for `fireworks`.

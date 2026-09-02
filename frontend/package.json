@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "d3-ease": "3",
-    "d3-timer": "3",
     "fireworks": "file:../../fireworks",
     "linklocal": "^2.8.2",
     "svelte": "4.2.20",

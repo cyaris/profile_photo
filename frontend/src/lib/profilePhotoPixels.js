@@ -173,10 +173,9 @@ function createFilledSlices({ cornerIndex, maxX, maxY, minX, minY }, grid) {
 }
 
 function createCornerSlices({ cornerIndex, mapPoint, ringWidth }, grid) {
-  let maxDiagonal = (ringWidth - 1) * 2
   let slices = []
 
-  for (let diagonal = 0; diagonal <= maxDiagonal; diagonal += 1) {
+  for (let diagonal = 0; diagonal <= (ringWidth - 1) * 2; diagonal += 1) {
     let iStart = Math.max(0, diagonal - (ringWidth - 1))
     let iEnd = Math.min(diagonal, ringWidth - 1)
     let points = Array.from({ length: iEnd - iStart + 1 }, (_, index) =>
@@ -252,9 +251,7 @@ export function createAutoTransitionFramePaths({ cellPixelIndexes, columnCount, 
     let minY = inset
     let maxX = columnCount - 1 - inset
     let maxY = rowCount - 1 - inset
-    let remainingWidth = maxX - minX + 1
-    let remainingHeight = maxY - minY + 1
-    let ringWidth = Math.min(baseRingWidth, Math.floor(Math.min(remainingWidth, remainingHeight) / 2))
+    let ringWidth = Math.min(baseRingWidth, Math.floor(Math.min(maxX - minX + 1, maxY - minY + 1) / 2))
     let pathCornerIndex = index % 2 ? (cornerIndex + 2) % 4 : cornerIndex
 
     paths.push({
