@@ -509,7 +509,7 @@
   })
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} />
+<svelte:window bind:innerWidth={viewportWidth} on:palettechange={scheduleRender} />
 
 <div
   class="mb-8 flex flex-col items-center overflow-x-clip"
