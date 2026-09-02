@@ -20,8 +20,8 @@
 
 ## Pixel Data Generation
 
-- Run a local production build after regenerating `frontend/src/lib/static/pixels.json` from a changed source image or
-  pixel-generation setting.
+- Regenerate `frontend/src/lib/static/pixels.json` and commit it after changing the source image or a pixel-generation
+  setting.
 
 ## Pixel Grid Rendering
 

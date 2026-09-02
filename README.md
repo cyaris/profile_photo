@@ -151,7 +151,6 @@ local details:
 
 - triggers: pushes to `dev` and `main`, plus manual dispatch
 - working directory: `frontend`
-- skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/pixel_portrait/`
 - production naming: unprefixed bundles from `main`
 - staged naming: `dev_`-prefixed bundles from `dev`

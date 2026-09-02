@@ -30,7 +30,6 @@ jobs:
     uses: cyaris/shared-automation/.github/workflows/rollup.yml@main
     with:
       working-directory: frontend
-      run-build: false
       local-dependency-repositories: |
         cyaris/fireworks:fireworks:main
       dist-directory: frontend/dist
