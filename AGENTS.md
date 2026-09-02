@@ -18,6 +18,11 @@
   pre-Canvas D3 rewrite's separate post-restore stroke-width settle transition before a pixel became reusable, and the
   Diagonal delay default derives from it.
 
+## Pixel Data Generation
+
+- Run a local production build after regenerating `frontend/src/lib/static/pixels.json` from a changed source image or
+  pixel-generation setting.
+
 ## Pixel Grid Rendering
 
 - Draw each pixel-grid boundary once in `drawPixelSeparators`, not as a per-pixel `strokeRect`. Derive its alpha from
