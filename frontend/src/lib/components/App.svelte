@@ -105,21 +105,27 @@
   let pixelCanvas
   let pixelBorderColor = "#ffffff"
   let laserEyeCanvas
+
   let pixelStates = createPixelStates(pixelRecords.length)
   let revealedPixels = createRevealFlags(pixelRecords.length)
   let revealedPixelCount = 0
+
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
   let modeSelectValue
+
   let laserEyesTimer
   let laserEyeCircles = []
   let laserVisionEnabled = false
+
   let activePointerId
   let activePointerPixelIndex
   let activePointerTarget
   let activePointerNeighborhoodIndexes = new Set()
+
   let autoTransitionPaths = []
   let autoTransitionNextStepTime
   let autoTransitionKey
+
   let prefersReducedMotion = false
   let isDestroyed = false
 

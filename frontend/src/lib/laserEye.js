@@ -2,11 +2,14 @@ import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
 import { configureCanvas2D, strokeOrFillCircle } from "svelte-lib/functions/canvas"
 
 const laserEyeColor = "#cc0000"
+
 const laserEyeDelayStep = 225
 const laserEyeInitialDelay = 500
 const laserEyeDuration = 3000
+
 const laserEyeStartRadius = 0.25
 const laserEyeStartStrokeWidth = 7.5
+
 const laserEyePositions = [
   { xRatio: 0.44, yRatio: 0.5 },
   { xRatio: 0.6125, yRatio: 0.49 }
