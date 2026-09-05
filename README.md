@@ -146,9 +146,8 @@ secret so trusted user or agent-authored pushes to `dev` can open the pull reque
 
 ### `.github/workflows/backend-ci.yml`
 
-Runs Black, isort, and pytest when backend files change. While the reusable Python workflow is staged only on
-`shared-automation`'s `dev` branch, this caller follows `@dev`; update it to `@main` after that upstream workflow is
-promoted, before treating the shared production branch as the contract.
+Runs Black, isort, and pytest when backend files change. The caller follows shared automation's `main` branch and will
+remain unavailable until the reusable Python workflow is promoted there.
 
 ### `.github/workflows/frontend-ci.yml`
 
