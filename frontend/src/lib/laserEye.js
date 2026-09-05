@@ -7,8 +7,9 @@ const laserEyeDelayStep = 225
 const laserEyeInitialDelay = 500
 const laserEyeDuration = 3000
 
-const laserEyeStartRadius = 0.25
-const laserEyeStartStrokeWidth = 7.5
+const laserEyeReferenceWidth = 400
+const laserEyeStartRadiusScale = 0.25 / laserEyeReferenceWidth
+const laserEyeStartStrokeWidthScale = 7.5 / laserEyeReferenceWidth
 
 const laserEyePositions = [
   { xRatio: 0.44, yRatio: 0.5 },
@@ -29,7 +30,7 @@ export function createLaserEyeBurst({ displayHeight, displayWidth, now }) {
   )
 }
 
-function getLaserEyeDraw(circle, timestamp) {
+export function getLaserEyeDraw(circle, timestamp) {
   let progress = getEasedProgress({
     delay: circle.delay,
     duration: laserEyeDuration,
@@ -37,13 +38,15 @@ function getLaserEyeDraw(circle, timestamp) {
     now: timestamp,
     start: circle.start
   })
+  let startRadius = circle.radiusBasis * laserEyeStartRadiusScale
+  let startStrokeWidth = circle.radiusBasis * laserEyeStartStrokeWidthScale
 
   return {
     cx: circle.cx,
     cy: circle.cy,
-    radius: laserEyeStartRadius + (circle.radiusBasis * laserEyeRadiusScale - laserEyeStartRadius) * progress,
+    radius: startRadius + (circle.radiusBasis * laserEyeRadiusScale - startRadius) * progress,
     strokeOpacity: 1 - progress,
-    strokeWidth: laserEyeStartStrokeWidth * (1 - progress)
+    strokeWidth: startStrokeWidth * (1 - progress)
   }
 }
 

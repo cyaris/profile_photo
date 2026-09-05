@@ -47,10 +47,15 @@ npm run preview
 Run validation:
 
 ```sh
+npm test
 npm run check
 npm run lint
 npm run format:check
 ```
+
+In Reveal mode, the progress gauge counts a pixel when its reveal transition starts. The pixel then completes its
+existing movement and fade, so the visible overlay can remain for roughly 950 ms after the gauge has counted it. This
+intentional timing preserves the transition animation; the gauge represents interaction progress, not completed paint.
 
 ## Auto Transition configuration
 
@@ -95,6 +100,8 @@ From `backend`, install the Python project in editable mode if needed:
 cd backend
 python3 -m pip install -e ".[dev]"
 ```
+
+Run backend validation from that directory with `pytest`, `black --check src tests`, and `isort --check-only src tests`.
 
 Generate the default 48 by 48 pixel data:
 
