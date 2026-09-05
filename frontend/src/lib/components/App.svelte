@@ -1,7 +1,10 @@
 <script>
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
-  import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
+  import ProgressBar from "svelte-lib/components/charts/cards/ProgressBar"
+  import Loading from "svelte-lib/components/Loading"
+  import Select from "svelte-lib/components/Select"
+  import Toggle from "svelte-lib/components/Toggle"
   import { createAnimationLoop, createPausableTimer, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
   import { getCSSCustomProperty, observeZoomStableViewport } from "svelte-lib/functions/dom"
 

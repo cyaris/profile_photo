@@ -1,5 +1,5 @@
-import { easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
-import { configureCanvas2D, strokeOrFillCircle } from "svelte-lib/functions/canvas"
+import { configureCanvas2D, getEasedProgress, strokeOrFillCircle } from "svelte-lib/functions/canvas"
+import { easeCubicInOut } from "svelte-lib/functions/easing"
 
 const laserEyeColor = "#cc0000"
 
