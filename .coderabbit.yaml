@@ -68,7 +68,7 @@ reviews:
         - Responsive-layout problems, clipping, overflow, and unexpected horizontal scrolling
         - Route-base or embedded GitHub Pages path mistakes
         - Imports that bypass package exports or depend on unpublished source paths
-        - D3 state, scale, transition, and data-join mistakes that make charts stale or nondeterministic
+        - Canvas sizing, pointer, transition-state, and D3 easing mistakes that make portrait effects stale or nondeterministic
         - Changes that break shared component APIs used by downstream apps
 
     - path: "frontend/**/*.{css,scss,svelte}"
@@ -97,6 +97,22 @@ reviews:
         - Python packaging or dependency changes that are not reflected in pyproject.toml
         - Exceptions that would leave generated frontend data partially updated
 
+    - path: "frontend/src/lib/**"
+      instructions: |
+        Check for:
+        - Pixel-transition activation, reuse, timing, path, or auto-mode changes that overlap sets, skip pixels, or alter the configured completion gap
+        - Canvas geometry, device-pixel snapping, separator, clipping, or alpha changes that double edges or render inconsistently across pixel ratios
+        - Laser-eye animation changes that put effects in the wrong layer, leave loops or timers active, or turn intentionally solid small circles into hollow rings
+        - Resize and zoom handling that feeds browser-zoom dimensions back into portrait geometry or leaves either canvas stale
+        - Pointer, pagination, reduced-motion, or mode changes that regress desktop, touch, keyboard, or repeated-mount behavior
+
+    - path: "frontend/tests/**/*.js"
+      instructions: |
+        Check for:
+        - Missing regression coverage for changed transition lifecycle, path ordering, geometry, pixel selection, or timing boundaries
+        - Assertions that validate only counts while allowing the wrong pixel indexes, order, corner, or reuse time
+        - Fixtures that conceal device-pixel-ratio, empty-path, repeated-activation, or exact-boundary failures
+
     - path: "**/.github/workflows/*.{yml,yaml}"
       instructions: |
         Check for:
@@ -105,7 +121,8 @@ reviews:
         - Unsafe use of pull_request_target
         - Incorrect branch or path filters
         - Deployment steps that could expose secrets
-        - Rollup upload workflows drifting from the shared svelte-lib composite action contract
+        - Rollup, upstream-watch, release, or validation callers drifting from shared-automation contracts
+        - Staged and production bundle names, fireworks dependency refs, or S3 prefixes diverging from repository guidance
 
     - path: "**/*.{md,markdown}"
       instructions: |
