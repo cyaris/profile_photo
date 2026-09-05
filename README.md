@@ -144,6 +144,17 @@ Runs on pushes to `dev`, then calls the
 to open a pull request from `dev` to `main` when one doesn't already exist. It passes the repository's `RELEASE_TOKEN`
 secret so trusted user or agent-authored pushes to `dev` can open the pull request.
 
+### `.github/workflows/backend-ci.yml`
+
+Runs Black, isort, and pytest when backend files change. While the reusable Python workflow is staged only on
+`shared-automation`'s `dev` branch, this caller follows `@dev`; update it to `@main` after that upstream workflow is
+promoted, before treating the shared production branch as the contract.
+
+### `.github/workflows/frontend-ci.yml`
+
+Runs the frontend's formatting, lint, Svelte check, build, and Node tests through shared CI when frontend files change.
+It checks out matching `dev` or `main` refs for both local package dependencies.
+
 ### `.github/workflows/auto-release.yml`
 
 Runs from manual dispatch only and calls the

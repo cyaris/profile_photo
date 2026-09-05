@@ -15,6 +15,6 @@ permissions:
 
 jobs:
   python-ci:
-    uses: cyaris/shared-automation/.github/workflows/python-ci.yml@main
+    uses: cyaris/shared-automation/.github/workflows/python-ci.yml@dev
     with:
       working-directory: backend
