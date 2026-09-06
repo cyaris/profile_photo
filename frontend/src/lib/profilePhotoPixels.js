@@ -7,6 +7,7 @@ import {
 } from "./profilePhotoPixelTransitions.js"
 
 const timingTolerance = 0.001
+
 const autoTransitionDiagonalCornerIndexes = { "top-left": 0, "top-right": 1, "bottom-right": 2, "bottom-left": 3 }
 
 function getTransitionRegionWidth(radius) {

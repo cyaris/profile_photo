@@ -6,4 +6,5 @@ frontend/dist/
 frontend/node_modules/
 
 backend/src/__pycache__/
+backend/tests/__pycache__/
 backend/*.egg-info/

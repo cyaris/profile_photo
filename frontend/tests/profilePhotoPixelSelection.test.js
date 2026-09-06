@@ -6,9 +6,11 @@ import {
   createAutoTransitionDiagonalPaths,
   createAutoTransitionFramePaths,
   createPixelModel,
+  createRevealFlags,
   createTransitionNeighborhoods,
   getAutoTransitionDiagonalCornerIndex,
   getGridLinePixelIndexes,
+  getPixelIndexFromPoint,
   getPixelNeighborhood
 } from "../src/lib/profilePhotoPixels.js"
 import { createPixelStates, transitionReuseDuration } from "../src/lib/profilePhotoPixelTransitions.js"
@@ -19,6 +21,33 @@ const pixels = Array.from({ length: 16 }, (_, index) => ({
   x: index % 4,
   y: Math.floor(index / 4)
 }))
+
+test("pixel model helpers create indexed records, reveal flags, and bounded point lookups", () => {
+  let { cellPixelIndexes, columnCount, pixelRecords, rowCount } = createPixelModel(pixels)
+
+  assert.equal(columnCount, 4)
+  assert.equal(rowCount, 4)
+  assert.equal(pixelRecords[5].index, 5)
+  assert.deepEqual([...createRevealFlags(pixelRecords.length)], Array(16).fill(0))
+  assert.equal(
+    getPixelIndexFromPoint({
+      cellPixelIndexes,
+      columnCount,
+      point: { height: 400, width: 400, x: 150, y: 150 },
+      rowCount
+    }),
+    5
+  )
+  assert.equal(
+    getPixelIndexFromPoint({
+      cellPixelIndexes,
+      columnCount,
+      point: { height: 0, width: 400, x: 150, y: 150 },
+      rowCount
+    }),
+    undefined
+  )
+})
 
 test("pointer neighborhoods and sparse pointer paths remain selection-only calculations", () => {
   let { cellPixelIndexes, columnCount, pixelRecords, rowCount } = createPixelModel(pixels)

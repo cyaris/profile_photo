@@ -4,6 +4,7 @@
 
 - Inherit README and Markdown style, GitHub Actions, reusable workflow wrapper, release policy, dispatch, pull-request
   review, workflow failure, commit, and release-management rules from `../shared-automation/AGENTS.md`.
+- Inherit shared Python and SQL conventions from `../shared-automation/AGENTS.md`.
 
 ## Auto Transition Timing
 
@@ -33,6 +34,8 @@
   `0.075` CSS-pixel SVG hairline at 2x density and must remain the same on desktop and mobile.
 - Laser-eye circles intentionally begin as solid dots and open into rings as they grow. Keep `strokeOrFillCircle` for
   radii below half the stroke width; a plain `stroke()` creates an incorrect hollow ring.
+- Scale the laser-eye starting radius and stroke width from the rendered portrait width, preserving the original values
+  at the 400 px source-image width so responsive layouts retain the same proportions.
 
 ## Rollup Delivery
 

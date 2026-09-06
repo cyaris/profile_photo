@@ -47,10 +47,15 @@ npm run preview
 Run validation:
 
 ```sh
+npm test
 npm run check
 npm run lint
 npm run format:check
 ```
+
+In Reveal mode, the progress gauge counts a pixel when its reveal transition starts. The pixel then completes its
+existing movement and fade, so the visible overlay can remain for roughly 950 ms after the gauge has counted it. This
+intentional timing preserves the transition animation; the gauge represents interaction progress, not completed paint.
 
 ## Auto Transition configuration
 
@@ -96,6 +101,8 @@ cd backend
 python3 -m pip install -e ".[dev]"
 ```
 
+Run backend validation from that directory with `pytest`, `black --check src tests`, and `isort --check-only src tests`.
+
 Generate the default 48 by 48 pixel data:
 
 ```sh
@@ -136,6 +143,16 @@ Runs on pushes to `dev`, then calls the
 [shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml)
 to open a pull request from `dev` to `main` when one doesn't already exist. It passes the repository's `RELEASE_TOKEN`
 secret so trusted user or agent-authored pushes to `dev` can open the pull request.
+
+### `.github/workflows/backend-ci.yml`
+
+Runs Black, isort, and pytest when backend files change. The caller follows shared automation's `main` branch and will
+remain unavailable until the reusable Python workflow is promoted there.
+
+### `.github/workflows/frontend-ci.yml`
+
+Runs the frontend's formatting, lint, Svelte check, build, and Node tests through shared CI when frontend files change.
+It checks out matching `dev` or `main` refs for both local package dependencies.
 
 ### `.github/workflows/auto-release.yml`
 

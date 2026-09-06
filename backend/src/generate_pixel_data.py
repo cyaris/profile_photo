@@ -30,23 +30,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def create_pixel_data(image: Image.Image, x_max: int, y_max: int) -> list[dict[str, int | str]]:
+    image_small = image.convert("RGB").resize((x_max, y_max), resample=Image.BILINEAR)
+
+    pixels: list[dict[str, int | str]] = []
+    for x in range(x_max):
+        for y in range(y_max):
+            red, green, blue = image_small.getpixel((x, y))[:3]
+            pixels.append({"x": x, "y": y, "id": f"x{x + 1}y{y + 1}", "rgb": f"rgb({red}, {green}, {blue})"})
+
+    return pixels
+
+
 def main() -> None:
     args = parse_args()
     x_max = args.x_max
     y_max = args.y_max
 
     logger.info("Opening source image at %s", FAVICON_PATH)
-    img = Image.open(FAVICON_PATH).convert("RGB")
-
-    img_small = img.resize((x_max, y_max), resample=Image.BILINEAR)
+    with Image.open(FAVICON_PATH) as image:
+        pixels = create_pixel_data(image, x_max, y_max)
 
     logger.info("Generating %s by %s pixel data", x_max, y_max)
-    pixels = []
-    for x in range(x_max):
-        for y in range(y_max):
-            red, green, blue = img_small.getpixel((x, y))[:3]
-            pixels.append({"x": x, "y": y, "id": f"x{x + 1}y{y + 1}", "rgb": f"rgb({red}, {green}, {blue})"})
-
     PIXELS_PATH.write_text(json.dumps(pixels), encoding="utf-8")
     logger.info("Wrote %s rows to %s", f"{len(pixels):,}", PIXELS_PATH)
 

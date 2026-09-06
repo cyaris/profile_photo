@@ -1,9 +1,12 @@
 <script>
   import { FireworkShow } from "fireworks/components"
   import { onDestroy, onMount } from "svelte"
-  import { Loading, ProgressBar, Select, Toggle } from "svelte-lib/components"
+  import ProgressBar from "svelte-lib/components/charts/cards/ProgressBar"
+  import Loading from "svelte-lib/components/Loading"
+  import Select from "svelte-lib/components/Select"
+  import Toggle from "svelte-lib/components/Toggle"
   import { createAnimationLoop, createPausableTimer, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
-  import { getCSSCustomProperty } from "svelte-lib/functions/dom"
+  import { getCSSCustomProperty, observeZoomStableViewport } from "svelte-lib/functions/dom"
 
   import { createLaserEyeBurst, drawLaserEyeCanvas, laserEyeRadiusScale } from "../laserEye.js"
   import { drawPixelCanvas } from "../profilePhotoPixelCanvas.js"
@@ -101,24 +104,31 @@
   let displayHeight
   let contentWrapper
   let viewportWidth
+  let portraitContainer
   let pixelCanvas
   let pixelBorderColor = "#ffffff"
   let laserEyeCanvas
+
   let pixelStates = createPixelStates(pixelRecords.length)
   let revealedPixels = createRevealFlags(pixelRecords.length)
   let revealedPixelCount = 0
+
   let sliderValue = Math.max(getModeValue(forcedMode), 0)
   let modeSelectValue
+
   let laserEyesTimer
   let laserEyeCircles = []
   let laserVisionEnabled = false
+
   let activePointerId
   let activePointerPixelIndex
   let activePointerTarget
   let activePointerNeighborhoodIndexes = new Set()
+
   let autoTransitionPaths = []
   let autoTransitionNextStepTime
   let autoTransitionKey
+
   let prefersReducedMotion = false
   let isDestroyed = false
 
@@ -479,6 +489,14 @@
     resetPixels()
   }
 
+  function syncLayoutSize(viewport) {
+    if (viewport.zoomOnly) return
+
+    viewportWidth = viewport.width
+    displayWidth = portraitContainer?.clientWidth
+    displayHeight = portraitContainer?.clientHeight
+  }
+
   function handleModeValueChange({ detail: e }) {
     let nextModeValue = getModeValue(e.d?.value)
 
@@ -505,6 +523,8 @@
 
   onMount(syncPixelBorderColor)
 
+  onMount(() => observeZoomStableViewport(syncLayoutSize, { element: portraitContainer }))
+
   onMount(() => {
     let reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let updatePrefersReducedMotion = () => (prefersReducedMotion = reducedMotionQuery.matches)
@@ -525,7 +545,7 @@
   })
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} on:palettechange={syncPixelBorderColor} />
+<svelte:window on:palettechange={syncPixelBorderColor} />
 
 <div
   class="mb-8 flex flex-col items-center overflow-x-clip"
@@ -537,8 +557,7 @@
     class="relative w-fit max-w-md"
     class:non-reactive={isAutoTransition}
     style:touch-action="pinch-zoom"
-    bind:clientWidth={displayWidth}
-    bind:clientHeight={displayHeight}
+    bind:this={portraitContainer}
     on:pointerdown={handlePixelPointerDown}
     on:pointermove={handlePixelPointerMove}
     on:pointerup={handlePixelPointerUp}
