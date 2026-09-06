@@ -14,3 +14,15 @@ test("laser-eye starting radius and stroke scale with the rendered portrait", ()
   assert.equal(mobileDraw.radius, desktopDraw.radius / 2)
   assert.equal(mobileDraw.strokeWidth, desktopDraw.strokeWidth / 2)
 })
+
+test("laser-eye final radius and stroke scale with the rendered portrait", () => {
+  let [desktopCircle] = createLaserEyeBurst({ displayHeight: 400, displayWidth: 400, now: 1000 })
+  let [mobileCircle] = createLaserEyeBurst({ displayHeight: 200, displayWidth: 200, now: 1000 })
+  let desktopDraw = getLaserEyeDraw(desktopCircle, 5000)
+  let mobileDraw = getLaserEyeDraw(mobileCircle, 5000)
+
+  assert.equal(desktopDraw.radius, 300)
+  assert.equal(desktopDraw.strokeWidth, 0)
+  assert.equal(mobileDraw.radius, 150)
+  assert.equal(mobileDraw.strokeWidth, 0)
+})
